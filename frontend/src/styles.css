@@ -1,0 +1,120 @@
+:root {
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: #111827;
+  background: radial-gradient(circle at top right, #dbeafe 0%, #f8fafc 38%, #e5e7eb 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 560px;
+  padding: 28px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #d1d5db;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px rgba(17, 24, 39, 0.08);
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4b5563;
+}
+
+h1 {
+  margin: 8px 0 8px;
+  font-size: 34px;
+  line-height: 1.05;
+}
+
+.subtitle {
+  margin: 0 0 22px;
+  color: #374151;
+}
+
+.form {
+  display: grid;
+  gap: 10px;
+}
+
+label {
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #9ca3af;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+button {
+  margin-top: 6px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #1f2937;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.success,
+.error {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.success {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.meta {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed #d1d5db;
+  color: #4b5563;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 29px;
+  }
+}
