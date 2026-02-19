@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    environment:
+      APP_NAME: InterviewOS API
+      APP_ENV: dev
+      APP_BASE_URL: http://localhost:8000
+      CORS_ORIGINS: "[\"*\"]"
+      EMAIL_PROVIDER: smtp
+      STORAGE_PROVIDER: local
+      EMAIL_FROM: assessment@example.com
+      LOCAL_ASSETS_DIR: assets
+      LOCAL_ASSESSMENT_FILENAME: example_assessment.zip
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_USE_TLS: "false"
+      SMTP_USE_SSL: "false"
+      REMINDER_DELAY_SECONDS: 120
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/assets:/app/assets
+    depends_on:
+      - mailpit
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"

@@ -14,7 +14,7 @@ Work has changed with AI, but hiring has not.
 
 Many companies still rely on short coding challenges that reward preparation rather than job readiness. These interviews rarely show how a candidate debugs unfamiliar code, uses documentation, works with AI tools, or communicates decisions.
 
-InterviewOS allows teams to simulate real engineering tasks and review both the outcome and the process behind it.
+InterviewOS exists to help move hiring toward employer-hosted, real-work simulations and away from leetcode-style filtering.
 
 ---
 
@@ -77,19 +77,57 @@ If the role involves real work, it can be simulated.
 
 ---
 
-## Project Status
+## What Works Today
 
-InterviewOS is being prepared for public release.
+- End-to-end invite flow with frontend + backend
+- `POST /assessments/start` plus legacy `POST /start-assessment`
+- Local out-of-box mode with no AWS account required
+- Bundled sample assessment archive for immediate testing
+- Local SMTP inbox via Mailpit in Docker Compose setup
+
+---
+
+## Run End-to-End (One Command)
+
+Prerequisite: Docker Desktop running.
+
+```bash
+make dev
+```
+
+This starts:
+
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:8000`
+- Mailpit inbox: `http://localhost:8025`
+
+Bundled sample assessment file:
+
+- `/Users/fkl/foretoken/InterviewOS/backend/assets/example_assessment.zip`
+
+---
+
+## Roadmap
 
 Planned next steps:
 
-- Docker deployment  
-- Example assessments  
-- Installation guide  
-- Evaluation templates  
-- ATS integrations  
+- Assessment execution state (attempt start/end/expiration)
+- Submission upload pipeline
+- Automated evaluation and rubric scoring
+- Screen/workflow recording ingestion and analysis
+- Structured candidate report generation
+- Reviewer dashboard and collaboration workflow
+- ATS and webhook integrations
 
-Star the repo to follow development.
+---
+
+## Contributing
+
+- `/Users/fkl/foretoken/InterviewOS/CONTRIBUTING.md`
+
+## Security
+
+- `/Users/fkl/foretoken/InterviewOS/SECURITY.md`
 
 ---
 
