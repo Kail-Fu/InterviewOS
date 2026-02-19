@@ -1,109 +1,138 @@
 # InterviewOS
 
-**Open infrastructure for real-work technical assessments.**
+<p align="center">
+  <img src="assets/gifs/01-create-assessment.gif" width="800" alt="Create an assessment">
+</p>
 
-InterviewOS helps companies evaluate candidates through job-relevant tasks instead of algorithm puzzles. Candidates complete realistic assignments using their normal tools, while InterviewOS records their workflow and generates structured evaluation reports.
+<p align="center">
+  <strong>Replace coding puzzles with real-work simulations.</strong><br/>
+  Open infrastructure for production-grade technical assessments.
+</p>
 
-The goal is simple: measure how someone actually works before you hire them.
-
----
-
-## Why InterviewOS Exists
-
-Work has changed with AI, but hiring has not.
-
-Many companies still rely on short coding challenges that reward preparation rather than job readiness. These interviews rarely show how a candidate debugs unfamiliar code, uses documentation, works with AI tools, or communicates decisions.
-
-InterviewOS exists to help move hiring toward employer-hosted, real-work simulations and away from leetcode-style filtering.
-
----
-
-## What InterviewOS Does
-
-### For Companies
-
-**Create assessments**  
-Define the task, follow-up questions, and report requirements.
-
-**Invite candidates**  
-Send secure email links. No account setup required.
-
-**Review structured reports**  
-Each report includes scores, responses, and a full screen recording so reviewers can see exactly how the candidate approached the work.
+<p align="center">
+  <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <a href="#run-locally-in-one-command"><img alt="Docker" src="https://img.shields.io/badge/docker-required-blue.svg"></a>
+  <a href="#status"><img alt="Status" src="https://img.shields.io/badge/status-early--stage-orange.svg"></a>
+</p>
 
 ---
 
-### For Candidates
+## What is InterviewOS?
 
-**Accept via link**  
-Start the assessment directly from the invitation.
+InterviewOS helps teams evaluate candidates through job-relevant tasks instead of algorithm puzzles.
 
-**Work normally**  
-Use your preferred tools and complete the task end-to-end while your screen is recorded.
+Candidates complete realistic assignments using their normal tools. InterviewOS records the full workflow and generates structured evaluation reports so reviewers can see:
 
-**Explain your thinking**  
-Answer follow-up questions to provide context for your decisions.
+- what the candidate shipped
+- how they approached the work
+- how they debugged, used tools, and made tradeoffs
+- how they explained decisions along the way
 
-**View your report (optional)**  
-Companies can enable report sharing for transparency.
-
----
-
-## Designed for Reliable Evaluation
-
-InterviewOS includes safeguards to help companies trust the results:
-
-- Runs entirely in the browser. No software to install  
-- Email-based authentication  
-- Protection against multiple attempts  
-- Optional camera verification  
-- Full workflow recording, not just final code  
-
-The focus is not only what candidates produce, but how they get there.
+Not just output. The process.
 
 ---
 
-## When to Use InterviewOS
+## How it works
 
-InterviewOS is useful anywhere a short puzzle falls short:
+### 1) Create an assessment
 
-- Backend or frontend engineering roles  
-- Machine learning positions  
-- Debugging-heavy jobs  
-- Tool-driven workflows  
-- AI-assisted development environments  
+<p align="center">
+  <img src="assets/gifs/01-create-assessment.gif" width="800" alt="Set up an assessment">
+</p>
 
-If the role involves real work, it can be simulated.
+Define the task, add follow-up questions, and configure reporting requirements.
+
+### 2) Invite a candidate
+
+<p align="center">
+  <img src="assets/gifs/02-invite-and-accept.gif" width="800" alt="Invite and accept">
+</p>
+
+Send a secure link. No account setup required.
+
+### 3) Candidate completes the work end-to-end
+
+<p align="center">
+  <img src="assets/gifs/03-workflow-recording.gif" width="800" alt="Candidate completes assessment with recording">
+</p>
+
+Candidates work normally using their preferred tools. InterviewOS captures the workflow and responses.
+
+### 4) Review a structured report
+
+<p align="center">
+  <img src="assets/gifs/04-generated-report.gif" width="800" alt="Generated report">
+</p>
+
+Reviewers get a high-signal summary plus the underlying evidence needed for calibration.
 
 ---
 
-## What Works Today
+## Why InterviewOS exists
 
-- End-to-end invite flow with frontend + backend
-- `POST /assessments/start` plus legacy `POST /start-assessment`
-- Local out-of-box mode with no AWS account required
-- Bundled sample assessment archive for immediate testing
-- Local SMTP inbox via Mailpit in Docker Compose setup
+Hiring is still optimized for puzzle performance. Modern engineering is not.
+
+Real work involves:
+
+- debugging unfamiliar code
+- reading and applying documentation
+- using AI tools responsibly
+- working through ambiguity
+- communicating tradeoffs and decisions
+
+Short algorithm challenges rarely measure these skills. InterviewOS is opinionated: real work beats rehearsed tricks.
 
 ---
 
-## Run End-to-End (One Command)
+## InterviewOS vs traditional coding interviews
+
+| Traditional puzzle interviews | InterviewOS |
+|---|---|
+| tests memorization and prep | tests job-relevant execution |
+| output-focused | workflow and decision-focused |
+| easy to game | harder to fake |
+| no realistic context | realistic tasks and constraints |
+| weak reviewer calibration | evidence-rich review (recording + report) |
+
+---
+
+## Run locally in one command
 
 Prerequisite: Docker Desktop running.
 
 ```bash
 make dev
-```
+````
 
 This starts:
 
-- Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:8000`
-- Mailpit inbox: `http://localhost:8025`
+* Frontend: [http://localhost:5173](http://localhost:5173)
+* Backend API: [http://localhost:8000](http://localhost:8000)
+* Local email inbox (Mailpit): [http://localhost:8025](http://localhost:8025)
 
-Bundled sample assessment file:
+A bundled sample assessment is included so you can test the full flow immediately.
 
-- `/Users/fkl/foretoken/InterviewOS/backend/assets/example_assessment.zip`
+---
+
+## What works today
+
+* end-to-end invite flow with frontend + backend
+* `POST /assessments/start` plus legacy `POST /start-assessment`
+* local out-of-box mode (no AWS account required)
+* bundled sample assessment archive for immediate testing
+* local SMTP inbox via Mailpit in Docker Compose
+
+---
+
+## Architecture (high level)
+
+InterviewOS is split into:
+
+* `frontend/`: candidate and admin UI
+* `backend/`: API, assessment packaging, and core workflow
+* `docker-compose.yml`: local end-to-end dev environment (including Mailpit)
+
+For development details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -111,36 +140,46 @@ Bundled sample assessment file:
 
 Planned next steps:
 
-- Assessment execution state (attempt start/end/expiration)
-- Submission upload pipeline
-- Automated evaluation and rubric scoring
-- Screen/workflow recording ingestion and analysis
-- Structured candidate report generation
-- Reviewer dashboard and collaboration workflow
-- ATS and webhook integrations
+* assessment execution state (attempt start/end/expiration)
+* submission upload pipeline
+* automated evaluation and rubric scoring
+* workflow recording ingestion and analysis
+* structured candidate report generation
+* reviewer dashboard and collaboration workflow
+* ATS and webhook integrations
+
+---
+
+## Status
+
+InterviewOS is early stage and moving quickly.
+
+If you try it and hit sharp edges, please open an issue. Feature requests and PRs are welcome.
 
 ---
 
 ## Contributing
 
-- `/Users/fkl/foretoken/InterviewOS/CONTRIBUTING.md`
-
-## Security
-
-- `/Users/fkl/foretoken/InterviewOS/SECURITY.md`
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
-## Hosted Option
+## Security
+
+See [SECURITY.md](SECURITY.md). Please report sensitive issues responsibly.
+
+---
+
+## Hosted version
 
 InterviewOS is the open infrastructure.
 
-If you prefer a fully managed assessment platform with ready-to-use simulations, automated scoring, and enterprise features, you can use the hosted version at:
+If you prefer a fully managed platform with ready-to-use simulations, automated scoring, and enterprise features:
 
-https://foretokenai.com
+[https://foretokenai.com](https://foretokenai.com)
 
 ---
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
