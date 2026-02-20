@@ -34,4 +34,4 @@ frontend/dist/
 *.log
 
 # Local planning artifacts
-docs/MIGRATION_PLAN.md
+docs/FORETOKEN_DEMO_MIGRATION_PLAN.md

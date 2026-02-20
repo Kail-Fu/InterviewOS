@@ -6,12 +6,17 @@ services:
       APP_NAME: InterviewOS API
       APP_ENV: dev
       APP_BASE_URL: http://localhost:8000
+      FRONTEND_BASE_URL: http://localhost:5173
       CORS_ORIGINS: "[\"*\"]"
       EMAIL_PROVIDER: smtp
       STORAGE_PROVIDER: local
+      RECORDING_PROVIDER: local
       EMAIL_FROM: assessment@example.com
       LOCAL_ASSETS_DIR: assets
       LOCAL_ASSESSMENT_FILENAME: example_assessment.zip
+      LOCAL_SUBMISSIONS_DIR: submissions
+      LOCAL_RECORDINGS_DIR: recordings
+      LOCAL_DB_PATH: data/interviewos.sqlite3
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       SMTP_USE_TLS: "false"
@@ -21,6 +26,9 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/assets:/app/assets
+      - ./backend/submissions:/app/submissions
+      - ./backend/recordings:/app/recordings
+      - ./backend/data:/app/data
     depends_on:
       - mailpit
 

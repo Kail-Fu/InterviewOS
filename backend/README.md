@@ -6,6 +6,12 @@ FastAPI backend for assessment invite and reminder flows.
 
 - `POST /assessments/start`
 - `POST /start-assessment` (legacy compatibility alias)
+- `POST /api/invite/bulk`
+- `POST /api/invite/resend`
+- `GET /api/invite/verify?token=...`
+- `POST /api/invite/mark-taken`
+- `GET /api/assessments`
+- `GET /api/candidates?assessmentId=...`
 - `GET /health`
 
 ## Zero-Account Local Mode (No AWS Required)
@@ -28,6 +34,10 @@ Default local mode:
 So generated download links point to:
 
 - `http://localhost:8000/assets/example_assessment.zip`
+
+Invite state is persisted in local SQLite by default:
+
+- `LOCAL_DB_PATH=data/interviewos.sqlite3`
 
 ## SMTP Mode (No AWS, Real Inbox UX)
 
