@@ -118,9 +118,14 @@ A bundled sample assessment is included so you can test the full flow immediatel
 
 * end-to-end invite flow with frontend + backend
 * `POST /assessments/start` plus legacy `POST /start-assessment`
+* invite lifecycle APIs: bulk send, resend, verify token, and mark-taken
 * local out-of-box mode (no AWS account required)
 * bundled sample assessment archive for immediate testing
 * local SMTP inbox via Mailpit in Docker Compose
+* admin dashboard foundation at `/dashboard` backed by:
+  * `GET /api/assessments`
+  * `GET /api/candidates?assessmentId=<id>`
+* candidate route placeholder at `/take-assessment` (reserved for upcoming full candidate flow)
 
 ---
 
@@ -129,7 +134,7 @@ A bundled sample assessment is included so you can test the full flow immediatel
 InterviewOS is split into:
 
 * `frontend/`: candidate and admin UI
-* `backend/`: API, assessment packaging, and core workflow
+* `backend/`: API, invite lifecycle, local SQLite state, assessment packaging, and core workflow
 * `docker-compose.yml`: local end-to-end dev environment (including Mailpit)
 
 For development details, see [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -140,19 +145,19 @@ For development details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Planned next steps:
 
-* assessment execution state (attempt start/end/expiration)
-* submission upload pipeline
+* admin assessment creation flow parity (`NewAssessment` + `QuestionSelection`)
+* assessment result view with invite-management parity
+* candidate execution flow parity (`Assessment` / `TakeAssessment`)
+* submission upload pipeline and recording multipart pipeline
+* structured candidate report viewing parity (`newreport`)
 * automated evaluation and rubric scoring
-* workflow recording ingestion and analysis
-* structured candidate report generation
-* reviewer dashboard and collaboration workflow
 * ATS and webhook integrations
 
 ---
 
 ## Status
 
-InterviewOS is early stage and moving quickly.
+InterviewOS is early stage and moving quickly. Core migration is currently through dashboard foundation (`PR-04`) with invite flow and provider architecture in place.
 
 If you try it and hit sharp edges, please open an issue. Feature requests and PRs are welcome.
 

@@ -6,6 +6,7 @@ from email.mime.text import MIMEText
 
 from app.core.config import Settings
 from app.services.aws_clients import s3_client, ses_client
+from app.services.email_templates import assessment_invite_email, assessment_reminder_email
 
 
 def generate_assessment_download_link(settings: Settings) -> str:
@@ -25,38 +26,6 @@ def generate_assessment_download_link(settings: Settings) -> str:
 
 def _sender_email(settings: Settings) -> str:
     return settings.ses_from_email or settings.email_from
-
-
-def _assessment_html(download_link: str) -> str:
-    return f"""
-    <html>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <p>Hi,</p>
-        <p>Thanks for applying. Your assessment begins now.</p>
-
-        <p>
-        <strong>Time limit:</strong> 60 minutes<br>
-        <strong>Recording:</strong> Please record your screen and camera<br>
-        <strong>Instructions:</strong>
-        <a href="{download_link}" target="_blank" style="color: #1a73e8;">Download assessment</a>
-        </p>
-
-        <p>We will send a reminder before time runs out.</p>
-
-        <p>Good luck!<br>The InterviewOS Team</p>
-    </body>
-    </html>
-    """
-
-
-def _reminder_text() -> str:
-    return (
-        "Hi,\n\n"
-        "This is your reminder for the InterviewOS assessment.\n\n"
-        "Please wrap up your work, stop recording, zip your project, "
-        "and submit according to the instructions.\n\n"
-        "Good luck!"
-    )
 
 
 def _send_via_console(to_email: str, subject: str, body: str) -> None:
@@ -90,30 +59,28 @@ def _send_via_smtp(to_email: str, subject: str, html_body: str, text_body: str, 
         server.send_message(msg)
 
 
-def send_assessment_email(to_email: str, download_link: str, settings: Settings) -> None:
-    subject = "Your InterviewOS Assessment"
-    html_body = _assessment_html(download_link)
-    text_body = (
-        "Hi,\n\n"
-        "Thanks for applying. Your assessment begins now.\n\n"
-        f"Instructions: {download_link}\n\n"
-        "Good luck!\n"
-        "The InterviewOS Team"
-    )
+def send_assessment_email(
+    to_email: str,
+    instructions_link: str,
+    settings: Settings,
+    *,
+    is_resend: bool = False,
+) -> None:
+    content = assessment_invite_email(instructions_link=instructions_link, is_resend=is_resend)
 
     if settings.email_provider == "console":
-        _send_via_console(to_email, subject, text_body)
+        _send_via_console(to_email, content.subject, content.text_body)
         return
 
     if settings.email_provider == "smtp":
-        _send_via_smtp(to_email, subject, html_body, text_body, settings)
+        _send_via_smtp(to_email, content.subject, content.html_body, content.text_body, settings)
         return
 
     msg = MIMEMultipart()
-    msg["Subject"] = subject
+    msg["Subject"] = content.subject
     msg["From"] = _sender_email(settings)
     msg["To"] = to_email
-    msg.attach(MIMEText(html_body, "html"))
+    msg.attach(MIMEText(content.html_body, "html"))
 
     ses = ses_client(settings)
     ses.send_raw_email(
@@ -124,15 +91,14 @@ def send_assessment_email(to_email: str, download_link: str, settings: Settings)
 
 
 def send_reminder_email(to_email: str, settings: Settings) -> None:
-    subject = "15 Minutes Left - InterviewOS Assessment"
-    text_body = _reminder_text()
+    content = assessment_reminder_email()
 
     if settings.email_provider == "console":
-        _send_via_console(to_email, subject, text_body)
+        _send_via_console(to_email, content.subject, content.text_body)
         return
 
     if settings.email_provider == "smtp":
-        _send_via_smtp(to_email, subject, f"<pre>{text_body}</pre>", text_body, settings)
+        _send_via_smtp(to_email, content.subject, content.html_body, content.text_body, settings)
         return
 
     ses = ses_client(settings)
@@ -140,10 +106,10 @@ def send_reminder_email(to_email: str, settings: Settings) -> None:
         Source=_sender_email(settings),
         Destination={"ToAddresses": [to_email]},
         Message={
-            "Subject": {"Data": subject},
+            "Subject": {"Data": content.subject},
             "Body": {
                 "Text": {
-                    "Data": text_body
+                    "Data": content.text_body
                 }
             },
         },
