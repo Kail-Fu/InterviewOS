@@ -74,6 +74,15 @@ input {
   font-size: 16px;
 }
 
+textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #9ca3af;
+  border-radius: 10px;
+  font-size: 16px;
+  resize: vertical;
+}
+
 button {
   margin-top: 6px;
   padding: 12px 16px;
@@ -84,6 +93,11 @@ button {
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.secondary {
+  background: #e5e7eb;
+  color: #111827;
 }
 
 button:disabled {
@@ -123,9 +137,58 @@ button:disabled {
   grid-template-columns: 1fr 1fr;
 }
 
+.actions-row {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0 16px;
+}
+
 .section-title {
   margin: 0 0 10px;
   font-size: 18px;
+}
+
+.question-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.question-card {
+  margin-top: 0;
+  text-align: left;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+}
+
+.question-card-selected {
+  border-color: #111827;
+  box-shadow: inset 0 0 0 1px #111827;
+}
+
+.question-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.question-meta {
+  margin: 0 0 8px;
+  color: #374151;
+  font-size: 13px;
+}
+
+.question-summary {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 14px;
+}
+
+.question-time {
+  margin: 0;
+  color: #4b5563;
+  font-size: 13px;
 }
 
 .table-wrap {
@@ -167,6 +230,10 @@ button:disabled {
   }
 
   .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .question-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -2,11 +2,27 @@ import { useEffect, useMemo, useState } from 'react'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
+function navigateTo(path) {
+  window.location.href = path
+}
+
+function apiUrl(path) {
+  return `${API_BASE_URL.replace(/\/$/, '')}${path}`
+}
+
 export default function App() {
   const path = typeof window !== 'undefined' ? window.location.pathname : '/'
 
   if (path === '/dashboard') {
     return <DashboardPage />
+  }
+
+  if (path === '/new-assessment') {
+    return <NewAssessmentPage />
+  }
+
+  if (path === '/selection-questions') {
+    return <QuestionSelectionPage />
   }
 
   if (path === '/take-assessment') {
@@ -22,7 +38,7 @@ function StartAssessmentPage() {
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
 
-  const endpoint = useMemo(() => `${API_BASE_URL.replace(/\/$/, '')}/assessments/start`, [])
+  const endpoint = useMemo(() => apiUrl('/assessments/start'), [])
 
   async function onSubmit(event) {
     event.preventDefault()
@@ -94,8 +110,8 @@ function DashboardPage() {
   const [selectedAssessmentId, setSelectedAssessmentId] = useState(null)
   const [candidates, setCandidates] = useState([])
 
-  const assessmentsEndpoint = `${API_BASE_URL.replace(/\/$/, '')}/api/assessments`
-  const candidatesEndpointBase = `${API_BASE_URL.replace(/\/$/, '')}/api/candidates`
+  const assessmentsEndpoint = apiUrl('/api/assessments')
+  const candidatesEndpointBase = apiUrl('/api/candidates')
 
   useEffect(() => {
     async function load() {
@@ -148,6 +164,10 @@ function DashboardPage() {
         <p className="eyebrow">InterviewOS Admin</p>
         <h1>Dashboard</h1>
         <p className="subtitle">Assessment list foundation migrated from foretoken-demo dashboard flow.</p>
+
+        <div className="actions-row">
+          <button type="button" onClick={() => navigateTo('/new-assessment')}>New Assessment</button>
+        </div>
 
         {loading && <p>Loading assessments...</p>}
         {error && <p className="error">{error}</p>}
@@ -217,7 +237,218 @@ function DashboardPage() {
         <div className="meta">
           <p><strong>Assessments API:</strong> {assessmentsEndpoint}</p>
           <p><strong>Candidates API:</strong> {candidatesEndpointBase}?assessmentId=&lt;id&gt;</p>
-          <p><strong>Next:</strong> PR-05 ports create-assessment flow from NewAssessment + QuestionSelection.</p>
+          <p><strong>Create flow:</strong> <code>/new-assessment</code> -> <code>/selection-questions</code></p>
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function NewAssessmentPage() {
+  const [title, setTitle] = useState('')
+  const [jobLink, setJobLink] = useState('')
+  const [jobDesc, setJobDesc] = useState('')
+  const [error, setError] = useState('')
+  const [checking, setChecking] = useState(false)
+  const [loadingTitle, setLoadingTitle] = useState(true)
+
+  useEffect(() => {
+    async function loadDefaultTitle() {
+      try {
+        const response = await fetch(apiUrl('/api/assessments'))
+        const payload = await response.json().catch(() => ({ assessments: [] }))
+        const existing = (payload.assessments || []).map((item) => item.title)
+
+        const now = new Date()
+        const dateLabel = `${now.getMonth() + 1}/${now.getDate()}`
+        const baseTitle = `${dateLabel} Software Engineer`
+        let unique = baseTitle
+        let counter = 2
+        while (existing.includes(unique)) {
+          unique = `${baseTitle} (${counter})`
+          counter += 1
+        }
+        setTitle(unique)
+      } catch {
+        setTitle('New Assessment')
+      } finally {
+        setLoadingTitle(false)
+      }
+    }
+    loadDefaultTitle()
+  }, [])
+
+  async function onNext(event) {
+    event.preventDefault()
+    const cleanTitle = title.trim()
+    if (!cleanTitle) {
+      setError('Title is required.')
+      return
+    }
+
+    setChecking(true)
+    setError('')
+    try {
+      const response = await fetch(`${apiUrl('/api/assessments/check-title')}?title=${encodeURIComponent(cleanTitle)}`)
+      if (!response.ok) {
+        throw new Error('Unable to verify title right now.')
+      }
+      const payload = await response.json()
+      if (payload.exists) {
+        setError('An assessment with this name already exists.')
+        return
+      }
+      const params = new URLSearchParams({
+        title: cleanTitle,
+        jobLink,
+        jobDesc,
+      })
+      navigateTo(`/selection-questions?${params.toString()}`)
+    } catch (nextError) {
+      setError(nextError.message || 'Unable to verify title right now.')
+    } finally {
+      setChecking(false)
+    }
+  }
+
+  return (
+    <main className="page">
+      <section className="card">
+        <p className="eyebrow">InterviewOS Admin</p>
+        <h1>New Assessment</h1>
+        <p className="subtitle">Step 1 of 2: define title and context, then pick a question pack.</p>
+
+        <form onSubmit={onNext} className="form">
+          <label htmlFor="title">Title*</label>
+          <input
+            id="title"
+            value={title}
+            disabled={loadingTitle}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Assessment title"
+            required
+          />
+
+          <label htmlFor="jobLink">Job Opening Link</label>
+          <input
+            id="jobLink"
+            value={jobLink}
+            onChange={(event) => setJobLink(event.target.value)}
+            placeholder="https://..."
+          />
+
+          <label htmlFor="jobDesc">Job Description</label>
+          <textarea
+            id="jobDesc"
+            rows={4}
+            value={jobDesc}
+            onChange={(event) => setJobDesc(event.target.value)}
+            placeholder="Optional role context"
+          />
+
+          <button type="submit" disabled={checking || loadingTitle}>
+            {checking ? 'Checking...' : 'Select Questions'}
+          </button>
+          <button type="button" className="secondary" onClick={() => navigateTo('/dashboard')}>
+            Cancel
+          </button>
+        </form>
+
+        {error && <p className="error">{error}</p>}
+      </section>
+    </main>
+  )
+}
+
+function QuestionSelectionPage() {
+  const params = new URLSearchParams(window.location.search)
+  const title = params.get('title') || 'Untitled Assessment'
+  const jobLink = params.get('jobLink') || ''
+  const jobDesc = params.get('jobDesc') || ''
+
+  const [questions, setQuestions] = useState([])
+  const [selected, setSelected] = useState(null)
+  const [error, setError] = useState('')
+  const [creating, setCreating] = useState(false)
+
+  useEffect(() => {
+    async function loadQuestions() {
+      try {
+        const response = await fetch(apiUrl('/api/questions'))
+        if (!response.ok) {
+          throw new Error('Failed to load questions')
+        }
+        const payload = await response.json()
+        setQuestions(payload || [])
+      } catch (loadError) {
+        setError(loadError.message || 'Failed to load questions')
+      }
+    }
+    loadQuestions()
+  }, [])
+
+  async function createNewAssessment() {
+    if (!selected) {
+      setError('Please select a question first.')
+      return
+    }
+    setCreating(true)
+    setError('')
+    try {
+      const response = await fetch(apiUrl('/api/new-assessments'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          jobLink,
+          jobDesc,
+          questionId: selected.id,
+        }),
+      })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.detail || 'Failed to create assessment')
+      }
+      navigateTo('/dashboard')
+    } catch (createError) {
+      setError(createError.message || 'Failed to create assessment')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  return (
+    <main className="page page-wide">
+      <section className="card card-wide">
+        <p className="eyebrow">InterviewOS Admin</p>
+        <h1>Select Questions</h1>
+        <p className="subtitle">Step 2 of 2: choose a template question set for <strong>{title}</strong>.</p>
+
+        {error && <p className="error">{error}</p>}
+
+        <div className="question-grid">
+          {questions.map((question) => (
+            <button
+              key={question.id}
+              type="button"
+              className={`question-card ${selected?.id === question.id ? 'question-card-selected' : ''}`}
+              onClick={() => setSelected(question)}
+            >
+              <p className="question-title">{question.title}</p>
+              <p className="question-meta">{question.role} • {question.language} • {question.difficulty}</p>
+              <p className="question-summary">{question.summary}</p>
+              <p className="question-time">Estimated: {question.estimatedTime}</p>
+            </button>
+          ))}
+        </div>
+
+        <div className="actions-row">
+          <button type="button" className="secondary" onClick={() => navigateTo('/new-assessment')}>
+            Back
+          </button>
+          <button type="button" onClick={createNewAssessment} disabled={creating || !selected}>
+            {creating ? 'Creating...' : 'Create Assessment'}
+          </button>
         </div>
       </section>
     </main>
