@@ -125,6 +125,10 @@ A bundled sample assessment is included so you can test the full flow immediatel
 * admin dashboard foundation at `/dashboard` backed by:
   * `GET /api/assessments`
   * `GET /api/candidates?assessmentId=<id>`
+* assessment creation flow foundation:
+  * `/new-assessment` (title + context)
+  * `/selection-questions` (question pick + create)
+  * `GET /api/questions`, `GET /api/assessments/check-title`, `POST /api/new-assessments`
 * candidate route placeholder at `/take-assessment` (reserved for upcoming full candidate flow)
 
 ---
@@ -145,7 +149,6 @@ For development details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Planned next steps:
 
-* admin assessment creation flow parity (`NewAssessment` + `QuestionSelection`)
 * assessment result view with invite-management parity
 * candidate execution flow parity (`Assessment` / `TakeAssessment`)
 * submission upload pipeline and recording multipart pipeline
@@ -157,7 +160,7 @@ Planned next steps:
 
 ## Status
 
-InterviewOS is early stage and moving quickly. Core migration is currently through dashboard foundation (`PR-04`) with invite flow and provider architecture in place.
+InterviewOS is early stage and moving quickly. Core migration is currently through assessment-creation foundation (`PR-05`) with invite flow, provider architecture, dashboard listing, and question-selection creation path in place.
 
 If you try it and hit sharp edges, please open an issue. Feature requests and PRs are welcome.
 

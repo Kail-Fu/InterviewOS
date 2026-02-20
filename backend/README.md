@@ -11,7 +11,11 @@ FastAPI backend for assessment invite and reminder flows.
 - `GET /api/invite/verify?token=...`
 - `POST /api/invite/mark-taken`
 - `GET /api/assessments`
+- `GET /api/assessments/check-title?title=...`
 - `GET /api/candidates?assessmentId=...`
+- `GET /api/questions`
+- `GET /api/questions/{id}`
+- `POST /api/new-assessments`
 - `GET /health`
 
 ## Zero-Account Local Mode (No AWS Required)
