@@ -273,6 +273,87 @@ def list_candidates(settings: Settings, assessment_id: int | None = None) -> lis
         ]
 
 
+def add_or_update_candidate(
+    settings: Settings,
+    *,
+    assessment_id: int,
+    email: str,
+    name: str | None,
+    status: str,
+) -> CandidateRecord:
+    normalized_email = email.strip().lower()
+    invited_at = _iso_now()
+    with _connect(settings) as connection:
+        existing = connection.execute(
+            """
+            SELECT id, assessment_id, email, name, status, invited_at
+            FROM candidates
+            WHERE assessment_id = ? AND lower(email) = lower(?)
+            LIMIT 1
+            """,
+            (assessment_id, normalized_email),
+        ).fetchone()
+
+        if existing is None:
+            cursor = connection.execute(
+                """
+                INSERT INTO candidates (assessment_id, email, name, status, invited_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (assessment_id, normalized_email, (name or "").strip() or None, status, invited_at),
+            )
+            candidate_id = int(cursor.lastrowid)
+        else:
+            candidate_id = int(existing["id"])
+            connection.execute(
+                """
+                UPDATE candidates
+                SET name = COALESCE(NULLIF(?, ''), name),
+                    status = ?,
+                    invited_at = ?
+                WHERE id = ?
+                """,
+                ((name or "").strip(), status, invited_at, candidate_id),
+            )
+
+        row = connection.execute(
+            "SELECT id, assessment_id, email, name, status, invited_at FROM candidates WHERE id = ?",
+            (candidate_id,),
+        ).fetchone()
+        if row is None:
+            raise RuntimeError("Failed to upsert candidate")
+        return CandidateRecord(
+            id=int(row["id"]),
+            assessment_id=int(row["assessment_id"]),
+            email=str(row["email"]),
+            name=row["name"],
+            status=str(row["status"]),
+            invited_at=str(row["invited_at"]),
+        )
+
+
+def get_candidate_by_id(settings: Settings, candidate_id: int) -> CandidateRecord | None:
+    with _connect(settings) as connection:
+        row = connection.execute(
+            """
+            SELECT id, assessment_id, email, name, status, invited_at
+            FROM candidates
+            WHERE id = ?
+            """,
+            (candidate_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return CandidateRecord(
+            id=int(row["id"]),
+            assessment_id=int(row["assessment_id"]),
+            email=str(row["email"]),
+            name=row["name"],
+            status=str(row["status"]),
+            invited_at=str(row["invited_at"]),
+        )
+
+
 def list_questions(settings: Settings) -> list[QuestionRecord]:
     with _connect(settings) as connection:
         rows = connection.execute(

@@ -5,6 +5,7 @@ from app.core.config import Settings, get_settings
 from app.services.assessment_store import (
     assessment_title_exists,
     create_assessment,
+    get_assessment,
     get_question,
     list_assessments,
     list_candidates,
@@ -39,6 +40,47 @@ def get_assessments(settings: Settings = Depends(get_settings)):
             }
             for item in assessments
         ]
+    }
+
+
+@router.get("/assessments/check-title")
+def check_assessment_title(title: str = Query(...), settings: Settings = Depends(get_settings)):
+    if not title.strip():
+        raise HTTPException(status_code=400, detail="Missing title")
+    return {"exists": assessment_title_exists(settings, title)}
+
+
+@router.get("/assessments/{assessment_id}")
+def get_assessment_detail(assessment_id: int, settings: Settings = Depends(get_settings)):
+    assessment = get_assessment(settings, assessment_id)
+    if assessment is None:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    question = get_question(settings, assessment.question_id) if assessment.question_id else None
+    return {
+        "id": assessment.id,
+        "title": assessment.title,
+        "role": assessment.role,
+        "status": assessment.status,
+        "createdAt": assessment.created_at,
+        "candidateCount": assessment.candidate_count,
+        "questionId": assessment.question_id,
+        "jobLink": assessment.job_link,
+        "jobDesc": assessment.job_desc,
+        "question": (
+            {
+                "id": question.id,
+                "_id": question.id,
+                "title": question.title,
+                "summary": question.summary,
+                "difficulty": question.difficulty,
+                "role": question.role,
+                "language": question.language,
+                "overview": question.overview,
+                "estimatedTime": question.estimated_time,
+            }
+            if question
+            else None
+        ),
     }
 
 
@@ -98,13 +140,6 @@ def get_question_by_id(question_id: int, settings: Settings = Depends(get_settin
         "overview": question.overview,
         "estimatedTime": question.estimated_time,
     }
-
-
-@router.get("/assessments/check-title")
-def check_assessment_title(title: str = Query(...), settings: Settings = Depends(get_settings)):
-    if not title.strip():
-        raise HTTPException(status_code=400, detail="Missing title")
-    return {"exists": assessment_title_exists(settings, title)}
 
 
 @router.post("/new-assessments")

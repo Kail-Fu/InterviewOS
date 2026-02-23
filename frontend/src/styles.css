@@ -83,6 +83,10 @@ textarea {
   resize: vertical;
 }
 
+.input-error {
+  border-color: #dc2626;
+}
+
 button {
   margin-top: 6px;
   padding: 12px 16px;
@@ -120,6 +124,18 @@ button:disabled {
 .error {
   background: #fef2f2;
   color: #991b1b;
+}
+
+.inline-error {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.field-error {
+  margin: 6px 0 0;
+  color: #b91c1c;
+  font-size: 12px;
+  line-height: 1.3;
 }
 
 .meta {
@@ -191,6 +207,78 @@ button:disabled {
   font-size: 13px;
 }
 
+.inline-btn {
+  margin-top: 0;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.result-header {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #f9fafb;
+  margin-bottom: 14px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 50;
+}
+
+.modal-panel {
+  width: 100%;
+  max-width: 760px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.modal-panel h2 {
+  margin: 0 0 12px;
+}
+
+.invite-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.invite-field {
+  display: grid;
+  gap: 4px;
+}
+
+.toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 70;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #86efac;
+  background: #f0fdf4;
+  color: #166534;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  font-weight: 600;
+}
+
+.success-toast {
+  border-color: #86efac;
+}
+
 .table-wrap {
   border: 1px solid #d1d5db;
   border-radius: 10px;
@@ -234,6 +322,10 @@ button:disabled {
   }
 
   .question-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .invite-row {
     grid-template-columns: 1fr;
   }
 }

@@ -11,6 +11,7 @@ FastAPI backend for assessment invite and reminder flows.
 - `GET /api/invite/verify?token=...`
 - `POST /api/invite/mark-taken`
 - `GET /api/assessments`
+- `GET /api/assessments/{id}`
 - `GET /api/assessments/check-title?title=...`
 - `GET /api/candidates?assessmentId=...`
 - `GET /api/questions`

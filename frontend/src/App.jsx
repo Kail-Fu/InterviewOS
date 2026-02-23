@@ -12,9 +12,14 @@ function apiUrl(path) {
 
 export default function App() {
   const path = typeof window !== 'undefined' ? window.location.pathname : '/'
+  const assessmentResultMatch = path.match(/^\/assessment_result\/(\d+)$/)
 
   if (path === '/dashboard') {
     return <DashboardPage />
+  }
+
+  if (assessmentResultMatch) {
+    return <AssessmentResultPage assessmentId={Number(assessmentResultMatch[1])} />
   }
 
   if (path === '/new-assessment') {
@@ -184,6 +189,7 @@ function DashboardPage() {
                       <th>Role</th>
                       <th>Status</th>
                       <th>Candidates</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -197,6 +203,18 @@ function DashboardPage() {
                         <td>{assessment.role}</td>
                         <td>{assessment.status}</td>
                         <td>{assessment.candidateCount}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="inline-btn"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              navigateTo(`/assessment_result/${assessment.id}`)
+                            }}
+                          >
+                            Open
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -409,7 +427,8 @@ function QuestionSelectionPage() {
         const payload = await response.json().catch(() => ({}))
         throw new Error(payload.detail || 'Failed to create assessment')
       }
-      navigateTo('/dashboard')
+      const payload = await response.json()
+      navigateTo(`/assessment_result/${payload.id}?openInvite=1`)
     } catch (createError) {
       setError(createError.message || 'Failed to create assessment')
     } finally {
@@ -450,6 +469,335 @@ function QuestionSelectionPage() {
             {creating ? 'Creating...' : 'Create Assessment'}
           </button>
         </div>
+      </section>
+    </main>
+  )
+}
+
+function AssessmentResultPage({ assessmentId }) {
+  const newInviteRow = () => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    name: '',
+    email: '',
+  })
+
+  const [assessment, setAssessment] = useState(null)
+  const [candidates, setCandidates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [showInvite, setShowInvite] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [inviteList, setInviteList] = useState([newInviteRow()])
+  const [inviteFormError, setInviteFormError] = useState('')
+  const [inviteFieldErrors, setInviteFieldErrors] = useState({})
+  const [toast, setToast] = useState(null)
+
+  useEffect(() => {
+    if (!toast) {
+      return
+    }
+    const timer = setTimeout(() => setToast(null), 2600)
+    return () => clearTimeout(timer)
+  }, [toast])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('openInvite') === '1') {
+      setShowInvite(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      setError('')
+      try {
+        const [assessmentRes, candidatesRes] = await Promise.all([
+          fetch(apiUrl(`/api/assessments/${assessmentId}`)),
+          fetch(apiUrl(`/api/candidates?assessmentId=${assessmentId}`)),
+        ])
+        if (!assessmentRes.ok) {
+          throw new Error('Failed to load assessment')
+        }
+        if (!candidatesRes.ok) {
+          throw new Error('Failed to load candidates')
+        }
+        const assessmentPayload = await assessmentRes.json()
+        const candidatesPayload = await candidatesRes.json()
+        setAssessment(assessmentPayload)
+        setCandidates(candidatesPayload.candidates || [])
+      } catch (loadError) {
+        setError(loadError.message || 'Failed to load assessment result')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [assessmentId])
+
+  async function sendInvites() {
+    setInviteFormError('')
+    setInviteFieldErrors({})
+
+    const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+    const fieldErrors = {}
+    const cleaned = []
+
+    for (const row of inviteList) {
+      const name = row.name.trim()
+      const email = row.email.trim()
+      const touched = name.length > 0 || email.length > 0
+      if (!touched) {
+        continue
+      }
+      if (!email) {
+        fieldErrors[row.id] = 'Email is required for this row.'
+        continue
+      }
+      if (!isValidEmail(email)) {
+        fieldErrors[row.id] = 'Enter a valid email address'
+        continue
+      }
+      cleaned.push({ rowId: row.id, name, email })
+    }
+
+    if (Object.keys(fieldErrors).length > 0) {
+      setInviteFieldErrors(fieldErrors)
+      return
+    }
+
+    if (cleaned.length === 0) {
+      setInviteFormError('Add at least one candidate email before sending invites.')
+      return
+    }
+    setSending(true)
+    try {
+      const response = await fetch(apiUrl('/api/invite/bulk'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assessmentId,
+          candidates: cleaned.map((item) => ({ name: item.name, email: item.email })),
+        }),
+      })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        if (Array.isArray(payload.detail)) {
+          const apiFieldErrors = {}
+          for (const detail of payload.detail) {
+            const msg = 'Enter a valid email address'
+            const loc = Array.isArray(detail?.loc) ? detail.loc : []
+            const candidateIndex = loc.length >= 3 && typeof loc[2] === 'number' ? loc[2] : null
+            if (candidateIndex != null && cleaned[candidateIndex]) {
+              apiFieldErrors[cleaned[candidateIndex].rowId] = msg
+            }
+          }
+          if (Object.keys(apiFieldErrors).length > 0) {
+            setInviteFieldErrors(apiFieldErrors)
+            setInviteFormError('')
+            return
+          }
+          setInviteFormError('Invite validation failed.')
+          return
+        }
+        const detail = typeof payload.detail === 'string' ? payload.detail : 'Failed to send invites'
+        setInviteFormError(detail)
+        return
+      }
+      const refreshed = await fetch(apiUrl(`/api/candidates?assessmentId=${assessmentId}`))
+      if (refreshed.ok) {
+        const payload = await refreshed.json()
+        setCandidates(payload.candidates || [])
+      }
+      setInviteList([newInviteRow()])
+      setShowInvite(false)
+      setToast(`Invites sent to ${cleaned.length} candidate${cleaned.length > 1 ? 's' : ''}.`)
+    } catch (sendError) {
+      setInviteFormError(sendError.message || 'Failed to send invites')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  async function resendInvite(candidate) {
+    try {
+      const response = await fetch(apiUrl('/api/invite/resend'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assessmentId,
+          candidateId: candidate.id,
+          email: candidate.email,
+        }),
+      })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.detail || 'Failed to resend invite')
+      }
+      const refreshed = await fetch(apiUrl(`/api/candidates?assessmentId=${assessmentId}`))
+      if (refreshed.ok) {
+        const payload = await refreshed.json()
+        setCandidates(payload.candidates || [])
+      }
+      setToast(`Invite resent to ${candidate.email}.`)
+    } catch (resendError) {
+      setError(resendError.message || 'Failed to resend invite')
+    }
+  }
+
+  function addInviteRow() {
+    setInviteList((rows) => [...rows, newInviteRow()])
+  }
+
+  function updateInvite(index, field, value) {
+    setInviteList((rows) => rows.map((row, i) => (i === index ? { ...row, [field]: value } : row)))
+    const rowId = inviteList[index]?.id
+    if (rowId && inviteFieldErrors[rowId]) {
+      setInviteFieldErrors((current) => {
+        const next = { ...current }
+        delete next[rowId]
+        return next
+      })
+    }
+    if (inviteFormError) {
+      setInviteFormError('')
+    }
+  }
+
+  function removeInvite(index) {
+    setInviteList((rows) => rows.filter((_, i) => i !== index))
+  }
+
+  function renderStatus(candidate) {
+    if (candidate.status === 'resent' && candidate.invitedAt) {
+      return `resent at ${new Date(candidate.invitedAt).toLocaleString()}`
+    }
+    return candidate.status
+  }
+
+  return (
+    <main className="page page-wide">
+      <section className="card card-wide">
+        <p className="eyebrow">InterviewOS Admin</p>
+        <h1>Assessment Result</h1>
+        <p className="subtitle">Parity slice for foretoken-demo AssessmentResult flow.</p>
+
+        <div className="actions-row">
+          <button type="button" className="secondary" onClick={() => navigateTo('/dashboard')}>
+            Back
+          </button>
+          <button type="button" onClick={() => setShowInvite(true)}>
+            Invite Candidates
+          </button>
+        </div>
+
+        {loading && <p>Loading assessment...</p>}
+        {error && <p className="error">{error}</p>}
+
+        {!loading && assessment && (
+          <>
+            <div className="result-header">
+              <p><strong>Title:</strong> {assessment.title}</p>
+              <p><strong>Role:</strong> {assessment.role}</p>
+              <p><strong>Status:</strong> {assessment.status}</p>
+              {assessment.question && (
+                <p><strong>Question:</strong> {assessment.question.title}</p>
+              )}
+            </div>
+
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Invited At</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {candidates.map((candidate) => (
+                    <tr key={candidate.id}>
+                      <td>{candidate.name || '-'}</td>
+                      <td>{candidate.email}</td>
+                      <td>{renderStatus(candidate)}</td>
+                      <td>{new Date(candidate.invitedAt).toLocaleString()}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="inline-btn"
+                          onClick={() => resendInvite(candidate)}
+                        >
+                          Resend Invite
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {candidates.length === 0 && (
+                    <tr>
+                      <td colSpan={5}>No candidates yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {showInvite && (
+          <div className="modal-backdrop">
+            <div className="modal-panel">
+              <h2>Invite Candidates</h2>
+              {inviteFormError && <p className="error inline-error">{inviteFormError}</p>}
+              <div className="form">
+                {inviteList.map((invite, index) => (
+                  <div className="invite-row" key={invite.id}>
+                    <div className="invite-field">
+                      <input
+                        type="text"
+                        placeholder="Name"
+                        value={invite.name}
+                        onChange={(event) => updateInvite(index, 'name', event.target.value)}
+                      />
+                    </div>
+                    <div className="invite-field">
+                      <input
+                        type="email"
+                        placeholder="Email"
+                        value={invite.email}
+                        onChange={(event) => updateInvite(index, 'email', event.target.value)}
+                        className={inviteFieldErrors[invite.id] ? 'input-error' : ''}
+                      />
+                      {inviteFieldErrors[invite.id] && (
+                        <p className="field-error">{inviteFieldErrors[invite.id]}</p>
+                      )}
+                    </div>
+                    {inviteList.length > 1 && (
+                      <button type="button" className="secondary" onClick={() => removeInvite(index)}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <div className="actions-row">
+                  <button type="button" className="secondary" onClick={addInviteRow}>
+                    Add Row
+                  </button>
+                  <button type="button" className="secondary" onClick={() => setShowInvite(false)}>
+                    Cancel
+                  </button>
+                  <button type="button" disabled={sending} onClick={sendInvites}>
+                    {sending ? 'Sending...' : 'Send Invites'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {toast && (
+          <div className="toast success-toast">{toast}</div>
+        )}
       </section>
     </main>
   )

@@ -129,6 +129,11 @@ A bundled sample assessment is included so you can test the full flow immediatel
   * `/new-assessment` (title + context)
   * `/selection-questions` (question pick + create)
   * `GET /api/questions`, `GET /api/assessments/check-title`, `POST /api/new-assessments`
+* assessment result + invite-management foundation:
+  * `/assessment_result/:id`
+  * `GET /api/assessments/{id}`
+  * `POST /api/invite/bulk` and `POST /api/invite/resend` now support `assessmentId` / `candidateId`
+  * resend UX polish: success toast + status label rendered as `resent at <timestamp>`
 * candidate route placeholder at `/take-assessment` (reserved for upcoming full candidate flow)
 
 ---
@@ -149,7 +154,6 @@ For development details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Planned next steps:
 
-* assessment result view with invite-management parity
 * candidate execution flow parity (`Assessment` / `TakeAssessment`)
 * submission upload pipeline and recording multipart pipeline
 * structured candidate report viewing parity (`newreport`)
@@ -160,7 +164,7 @@ Planned next steps:
 
 ## Status
 
-InterviewOS is early stage and moving quickly. Core migration is currently through assessment-creation foundation (`PR-05`) with invite flow, provider architecture, dashboard listing, and question-selection creation path in place.
+InterviewOS is early stage and moving quickly. Core migration is currently through assessment-result + invite-management foundation (`PR-06`) with invite flow, provider architecture, dashboard listing, and creation/result paths in place.
 
 If you try it and hit sharp edges, please open an issue. Feature requests and PRs are welcome.
 

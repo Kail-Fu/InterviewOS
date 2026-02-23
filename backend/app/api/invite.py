@@ -18,12 +18,15 @@ class CandidateInvite(BaseModel):
 
 
 class BulkInviteRequest(BaseModel):
+    assessmentId: int | None = None
     candidates: list[CandidateInvite]
 
 
 class ResendInviteRequest(BaseModel):
     email: EmailStr | None = None
     token: str | None = None
+    assessmentId: int | None = None
+    candidateId: int | None = None
 
 
 class MarkTakenRequest(BaseModel):
@@ -32,13 +35,27 @@ class MarkTakenRequest(BaseModel):
 
 @router.post("/bulk")
 def send_bulk_invites(payload: BulkInviteRequest, settings: Settings = Depends(get_settings)):
-    invites = [create_and_send_invite(candidate.email, settings) for candidate in payload.candidates]
+    invites = [
+        create_and_send_invite(
+            candidate.email,
+            settings,
+            assessment_id=payload.assessmentId,
+            candidate_name=candidate.name,
+        )
+        for candidate in payload.candidates
+    ]
     return {"message": "Invites sent.", "count": len(invites), "invites": invites}
 
 
 @router.post("/resend")
 def resend(payload: ResendInviteRequest, settings: Settings = Depends(get_settings)):
-    invite = resend_invite(settings=settings, email=payload.email, token=payload.token)
+    invite = resend_invite(
+        settings=settings,
+        email=payload.email,
+        token=payload.token,
+        assessment_id=payload.assessmentId,
+        candidate_id=payload.candidateId,
+    )
     return {"message": "Invite resent.", "invite": invite}
 
 

@@ -5,6 +5,7 @@ from app.services.assessment import (
     generate_assessment_download_link,
     send_assessment_email,
 )
+from app.services.assessment_store import add_or_update_candidate, get_candidate_by_id
 from app.services.invite_store import (
     ACTIVE_STATUSES,
     InviteRecord,
@@ -33,16 +34,45 @@ def _to_public_invite(invite: InviteRecord, settings: Settings) -> dict[str, str
     }
 
 
-def create_and_send_invite(email: str, settings: Settings) -> dict[str, str | int | None]:
+def create_and_send_invite(
+    email: str,
+    settings: Settings,
+    *,
+    assessment_id: int | None = None,
+    candidate_name: str | None = None,
+) -> dict[str, str | int | None]:
     normalized_email = email.strip().lower()
     invite = create_invite(normalized_email, settings, status="invited", supersede_existing=True)
     send_assessment_email(normalized_email, _invite_url(invite.token, settings), settings)
+    if assessment_id is not None:
+        add_or_update_candidate(
+            settings,
+            assessment_id=assessment_id,
+            email=normalized_email,
+            name=candidate_name,
+            status="invited",
+        )
     return _to_public_invite(invite, settings)
 
 
-def resend_invite(*, settings: Settings, email: str | None = None, token: str | None = None) -> dict[str, str | int | None]:
-    if not email and not token:
-        raise HTTPException(status_code=400, detail="Provide either email or token.")
+def resend_invite(
+    *,
+    settings: Settings,
+    email: str | None = None,
+    token: str | None = None,
+    assessment_id: int | None = None,
+    candidate_id: int | None = None,
+) -> dict[str, str | int | None]:
+    if not email and not token and candidate_id is None:
+        raise HTTPException(status_code=400, detail="Provide email, token, or candidateId.")
+
+    if candidate_id is not None:
+        candidate = get_candidate_by_id(settings, candidate_id)
+        if candidate is None:
+            raise HTTPException(status_code=404, detail="Candidate not found.")
+        email = candidate.email
+        if assessment_id is None:
+            assessment_id = candidate.assessment_id
 
     source_invite = None
     if token:
@@ -63,6 +93,14 @@ def resend_invite(*, settings: Settings, email: str | None = None, token: str | 
         supersede_existing=True,
     )
     send_assessment_email(source_invite.email, _invite_url(resent.token, settings), settings, is_resend=True)
+    if assessment_id is not None:
+        add_or_update_candidate(
+            settings,
+            assessment_id=assessment_id,
+            email=source_invite.email,
+            name=None,
+            status="resent",
+        )
     return _to_public_invite(resent, settings)
 
 
