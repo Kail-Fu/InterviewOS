@@ -33,5 +33,11 @@ frontend/dist/
 # Logs
 *.log
 
+# Local generated assessment artifacts
+backend/recordings/**
+!backend/recordings/.gitkeep
+backend/submissions/**
+!backend/submissions/.gitkeep
+
 # Local planning artifacts
 docs/FORETOKEN_DEMO_MIGRATION_PLAN.md
