@@ -3,6 +3,7 @@ from pydantic import BaseModel, EmailStr
 
 from app.core.config import Settings, get_settings
 from app.services.assessment import (
+    generate_assessment_download_link,
     schedule_reminder_email,
 )
 from app.services.invites import create_and_send_invite
@@ -13,6 +14,10 @@ legacy_router = APIRouter(tags=["assessments-legacy"])
 
 class StartAssessmentRequest(BaseModel):
     email: EmailStr
+    name: str | None = None
+    shareConsent: str | None = None
+    company: str | None = None
+    assessmentId: int | str | None = None
 
 
 @router.post("/start")
@@ -21,6 +26,15 @@ async def start_assessment(
     background_tasks: BackgroundTasks,
     settings: Settings = Depends(get_settings),
 ):
+    if payload.name:
+        assessment_id = payload.assessmentId if payload.assessmentId is not None else "default"
+        return {
+            "downloadUrl": generate_assessment_download_link(settings),
+            "assessmentId": assessment_id,
+            "assessmentType": "default",
+            "s3Key": settings.assessment_object_key,
+        }
+
     create_and_send_invite(payload.email, settings)
     background_tasks.add_task(schedule_reminder_email, payload.email, settings)
     return {"message": "Assessment sent to candidate."}

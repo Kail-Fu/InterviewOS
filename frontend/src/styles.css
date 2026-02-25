@@ -1,26 +1,22 @@
-:root {
+.io-admin {
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   color: #111827;
   background: radial-gradient(circle at top right, #dbeafe 0%, #f8fafc 38%, #e5e7eb 100%);
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
   min-height: 100vh;
 }
 
-.page {
+.io-admin * {
+  box-sizing: border-box;
+}
+
+.io-admin .page {
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 24px;
 }
 
-.card {
+.io-admin .card {
   width: 100%;
   max-width: 560px;
   padding: 28px;
@@ -30,15 +26,15 @@ body {
   box-shadow: 0 20px 45px rgba(17, 24, 39, 0.08);
 }
 
-.page-wide {
+.io-admin .page-wide {
   align-items: start;
 }
 
-.card-wide {
+.io-admin .card-wide {
   max-width: 1080px;
 }
 
-.eyebrow {
+.io-admin .eyebrow {
   margin: 0;
   font-size: 12px;
   letter-spacing: 0.08em;
@@ -46,27 +42,28 @@ body {
   color: #4b5563;
 }
 
-h1 {
+.io-admin h1 {
   margin: 8px 0 8px;
   font-size: 34px;
   line-height: 1.05;
 }
 
-.subtitle {
+.io-admin .subtitle {
   margin: 0 0 22px;
   color: #374151;
 }
 
-.form {
+.io-admin .form {
   display: grid;
   gap: 10px;
 }
 
-label {
+.io-admin label {
   font-weight: 600;
 }
 
-input {
+.io-admin input,
+.io-admin textarea {
   width: 100%;
   padding: 12px;
   border: 1px solid #9ca3af;
@@ -74,20 +71,15 @@ input {
   font-size: 16px;
 }
 
-textarea {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #9ca3af;
-  border-radius: 10px;
-  font-size: 16px;
+.io-admin textarea {
   resize: vertical;
 }
 
-.input-error {
+.io-admin .input-error {
   border-color: #dc2626;
 }
 
-button {
+.io-admin button {
   margin-top: 6px;
   padding: 12px 16px;
   border: 0;
@@ -99,46 +91,46 @@ button {
   cursor: pointer;
 }
 
-.secondary {
+.io-admin .secondary {
   background: #e5e7eb;
   color: #111827;
 }
 
-button:disabled {
+.io-admin button:disabled {
   opacity: 0.7;
   cursor: wait;
 }
 
-.success,
-.error {
+.io-admin .success,
+.io-admin .error {
   margin: 14px 0 0;
   padding: 10px 12px;
   border-radius: 10px;
 }
 
-.success {
+.io-admin .success {
   background: #ecfdf5;
   color: #065f46;
 }
 
-.error {
+.io-admin .error {
   background: #fef2f2;
   color: #991b1b;
 }
 
-.inline-error {
+.io-admin .inline-error {
   margin-top: 0;
   margin-bottom: 10px;
 }
 
-.field-error {
+.io-admin .field-error {
   margin: 6px 0 0;
   color: #b91c1c;
   font-size: 12px;
   line-height: 1.3;
 }
 
-.meta {
+.io-admin .meta {
   margin-top: 16px;
   padding-top: 14px;
   border-top: 1px dashed #d1d5db;
@@ -147,30 +139,30 @@ button:disabled {
   word-break: break-all;
 }
 
-.dashboard-grid {
+.io-admin .dashboard-grid {
   display: grid;
   gap: 18px;
   grid-template-columns: 1fr 1fr;
 }
 
-.actions-row {
+.io-admin .actions-row {
   display: flex;
   gap: 10px;
   margin: 10px 0 16px;
 }
 
-.section-title {
+.io-admin .section-title {
   margin: 0 0 10px;
   font-size: 18px;
 }
 
-.question-grid {
+.io-admin .question-grid {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.question-card {
+.io-admin .question-card {
   margin-top: 0;
   text-align: left;
   border: 1px solid #d1d5db;
@@ -178,36 +170,36 @@ button:disabled {
   color: #111827;
 }
 
-.question-card-selected {
+.io-admin .question-card-selected {
   border-color: #111827;
   box-shadow: inset 0 0 0 1px #111827;
 }
 
-.question-title {
+.io-admin .question-title {
   margin: 0 0 8px;
   font-size: 16px;
   font-weight: 700;
 }
 
-.question-meta {
+.io-admin .question-meta {
   margin: 0 0 8px;
   color: #374151;
   font-size: 13px;
 }
 
-.question-summary {
+.io-admin .question-summary {
   margin: 0 0 8px;
   color: #111827;
   font-size: 14px;
 }
 
-.question-time {
+.io-admin .question-time {
   margin: 0;
   color: #4b5563;
   font-size: 13px;
 }
 
-.inline-btn {
+.io-admin .inline-btn {
   margin-top: 0;
   padding: 6px 10px;
   font-size: 13px;
@@ -216,7 +208,7 @@ button:disabled {
   color: #111827;
 }
 
-.result-header {
+.io-admin .result-header {
   display: grid;
   gap: 6px;
   padding: 12px;
@@ -226,7 +218,7 @@ button:disabled {
   margin-bottom: 14px;
 }
 
-.modal-backdrop {
+.io-admin .modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
@@ -236,7 +228,7 @@ button:disabled {
   z-index: 50;
 }
 
-.modal-panel {
+.io-admin .modal-panel {
   width: 100%;
   max-width: 760px;
   background: #fff;
@@ -245,23 +237,23 @@ button:disabled {
   padding: 16px;
 }
 
-.modal-panel h2 {
+.io-admin .modal-panel h2 {
   margin: 0 0 12px;
 }
 
-.invite-row {
+.io-admin .invite-row {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
   gap: 10px;
   align-items: start;
 }
 
-.invite-field {
+.io-admin .invite-field {
   display: grid;
   gap: 4px;
 }
 
-.toast {
+.io-admin .toast {
   position: fixed;
   right: 18px;
   bottom: 18px;
@@ -275,57 +267,57 @@ button:disabled {
   font-weight: 600;
 }
 
-.success-toast {
+.io-admin .success-toast {
   border-color: #86efac;
 }
 
-.table-wrap {
+.io-admin .table-wrap {
   border: 1px solid #d1d5db;
   border-radius: 10px;
   overflow: auto;
   background: #fff;
 }
 
-.table {
+.io-admin .table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }
 
-.table th,
-.table td {
+.io-admin .table th,
+.io-admin .table td {
   padding: 10px 12px;
   border-bottom: 1px solid #e5e7eb;
   text-align: left;
   vertical-align: top;
 }
 
-.table tbody tr:hover {
+.io-admin .table tbody tr:hover {
   background: #f9fafb;
 }
 
-.table tbody tr.selected {
+.io-admin .table tbody tr.selected {
   background: #eef2ff;
 }
 
 @media (max-width: 640px) {
-  .card {
+  .io-admin .card {
     padding: 20px;
   }
 
-  h1 {
+  .io-admin h1 {
     font-size: 29px;
   }
 
-  .dashboard-grid {
+  .io-admin .dashboard-grid {
     grid-template-columns: 1fr;
   }
 
-  .question-grid {
+  .io-admin .question-grid {
     grid-template-columns: 1fr;
   }
 
-  .invite-row {
+  .io-admin .invite-row {
     grid-template-columns: 1fr;
   }
 }

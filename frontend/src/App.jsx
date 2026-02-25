@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import Assessment from './Assessment'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
@@ -13,28 +14,37 @@ function apiUrl(path) {
 export default function App() {
   const path = typeof window !== 'undefined' ? window.location.pathname : '/'
   const assessmentResultMatch = path.match(/^\/assessment_result\/(\d+)$/)
+  const loadingMatch = path.match(/^\/[^/]+\/loading\/(.+)$/)
 
   if (path === '/dashboard') {
-    return <DashboardPage />
+    return <AdminShell><DashboardPage /></AdminShell>
   }
 
   if (assessmentResultMatch) {
-    return <AssessmentResultPage assessmentId={Number(assessmentResultMatch[1])} />
+    return <AdminShell><AssessmentResultPage assessmentId={Number(assessmentResultMatch[1])} /></AdminShell>
+  }
+
+  if (loadingMatch) {
+    return <LoadingPlaceholder assessmentId={loadingMatch[1]} />
   }
 
   if (path === '/new-assessment') {
-    return <NewAssessmentPage />
+    return <AdminShell><NewAssessmentPage /></AdminShell>
   }
 
   if (path === '/selection-questions') {
-    return <QuestionSelectionPage />
+    return <AdminShell><QuestionSelectionPage /></AdminShell>
   }
 
   if (path === '/take-assessment') {
-    return <TakeAssessmentPlaceholder />
+    return <TakeAssessmentGateway />
   }
 
-  return <StartAssessmentPage />
+  return <AdminShell><StartAssessmentPage /></AdminShell>
+}
+
+function AdminShell({ children }) {
+  return <div className="io-admin">{children}</div>
 }
 
 function StartAssessmentPage() {
@@ -255,7 +265,7 @@ function DashboardPage() {
         <div className="meta">
           <p><strong>Assessments API:</strong> {assessmentsEndpoint}</p>
           <p><strong>Candidates API:</strong> {candidatesEndpointBase}?assessmentId=&lt;id&gt;</p>
-          <p><strong>Create flow:</strong> <code>/new-assessment</code> -> <code>/selection-questions</code></p>
+          <p><strong>Create flow:</strong> <code>/new-assessment</code> {'->'} <code>/selection-questions</code></p>
         </div>
       </section>
     </main>
@@ -803,23 +813,130 @@ function AssessmentResultPage({ assessmentId }) {
   )
 }
 
-function TakeAssessmentPlaceholder() {
+function TakeAssessmentGateway() {
   const token = typeof window !== 'undefined'
     ? new URLSearchParams(window.location.search).get('token')
     : null
+  const [state, setState] = useState('loading')
+  const [invite, setInvite] = useState(null)
+  const [assessmentData, setAssessmentData] = useState(null)
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    async function verify() {
+      if (!token) {
+        setState('invalid')
+        return
+      }
+      try {
+        const response = await fetch(`${apiUrl('/api/invite/verify')}?token=${encodeURIComponent(token)}`)
+        if (!response.ok) {
+          setState('invalid')
+          return
+        }
+        const payload = await response.json()
+        if (payload.expired) {
+          setInvite(payload.invite || null)
+          setState('expired')
+          return
+        }
+        if (payload.taken) {
+          setInvite(payload.invite || null)
+          setState('taken')
+          return
+        }
+        if (!payload.valid) {
+          setState('invalid')
+          return
+        }
+        setInvite(payload.invite || null)
+        const assessmentId = payload.invite?.assessmentId || 'default'
+        const assessmentRes = await fetch(apiUrl(`/api/public/assessment/${assessmentId}`))
+        if (!assessmentRes.ok) {
+          setState('invalid')
+          return
+        }
+        const assessmentPayload = await assessmentRes.json()
+        setAssessmentData(assessmentPayload)
+        setState('ready')
+      } catch {
+        setState('invalid')
+      }
+    }
+    verify()
+  }, [token])
+
+  async function resend() {
+    try {
+      await fetch(apiUrl('/api/invite/resend'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: invite?.email || '',
+          assessmentId: invite?.assessmentId || null,
+        }),
+      })
+      setState('resent')
+      setMessage('A new link has been sent to your email.')
+    } catch {
+      setMessage('Failed to resend. Please contact your recruiter.')
+    }
+  }
+
+  if (state === 'ready' && assessmentData) {
+    return (
+      <Assessment
+        assessmentId={assessmentData.id}
+        assessmentTitle={assessmentData.title}
+        company={null}
+        inviteToken={token}
+      />
+    )
+  }
 
   return (
     <main className="page">
       <section className="card">
         <p className="eyebrow">InterviewOS Candidate</p>
-        <h1>Take Assessment</h1>
-        <p className="subtitle">
-          Candidate execution UI is scheduled for PR-07. This route is now reserved and no longer mirrors the admin start page.
-        </p>
-        <div className="meta">
-          <p><strong>Token detected:</strong> {token || '(none)'}</p>
-          <p><strong>Expected now:</strong> invite verification APIs are ready; full candidate flow arrives in PR-07/PR-08.</p>
-        </div>
+        {state === 'loading' && <h1>Verifying invite...</h1>}
+        {state === 'invalid' && (
+          <>
+            <h1>Invalid or missing link</h1>
+            <p className="subtitle">Please check your invitation email or contact your recruiter.</p>
+          </>
+        )}
+        {state === 'expired' && (
+          <>
+            <h1>This link has expired</h1>
+            <p className="subtitle">Your assessment link expired. Request a new one.</p>
+            <button type="button" onClick={resend}>Send New Link</button>
+          </>
+        )}
+        {state === 'taken' && (
+          <>
+            <h1>Assessment already started</h1>
+            <p className="subtitle">This assessment link has already been used.</p>
+          </>
+        )}
+        {state === 'resent' && (
+          <>
+            <h1>New link sent</h1>
+            <p className="subtitle">{message}</p>
+          </>
+        )}
+      </section>
+    </main>
+  )
+}
+
+function LoadingPlaceholder({ assessmentId }) {
+  return (
+    <main className="page">
+      <section className="card">
+        <p className="eyebrow">InterviewOS Candidate</p>
+        <h1>Submission Received</h1>
+        <p className="subtitle">Assessment {assessmentId} submission was uploaded. Report generation UI will be released in the next iteration.</p>
+        <button type="button" onClick={() => navigateTo('/dashboard')}>Back to Dashboard</button>
       </section>
     </main>
   )

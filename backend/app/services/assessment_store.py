@@ -354,6 +354,48 @@ def get_candidate_by_id(settings: Settings, candidate_id: int) -> CandidateRecor
         )
 
 
+def get_candidate_by_assessment_and_email(
+    settings: Settings, *, assessment_id: int, email: str
+) -> CandidateRecord | None:
+    normalized_email = email.strip().lower()
+    with _connect(settings) as connection:
+        row = connection.execute(
+            """
+            SELECT id, assessment_id, email, name, status, invited_at
+            FROM candidates
+            WHERE assessment_id = ? AND lower(email) = lower(?)
+            LIMIT 1
+            """,
+            (assessment_id, normalized_email),
+        ).fetchone()
+        if row is None:
+            return None
+        return CandidateRecord(
+            id=int(row["id"]),
+            assessment_id=int(row["assessment_id"]),
+            email=str(row["email"]),
+            name=row["name"],
+            status=str(row["status"]),
+            invited_at=str(row["invited_at"]),
+        )
+
+
+def mark_candidate_submitted(
+    settings: Settings,
+    *,
+    assessment_id: int,
+    email: str,
+    name: str | None = None,
+) -> CandidateRecord:
+    return add_or_update_candidate(
+        settings,
+        assessment_id=assessment_id,
+        email=email,
+        name=name,
+        status="submitted",
+    )
+
+
 def list_questions(settings: Settings) -> list[QuestionRecord]:
     with _connect(settings) as connection:
         rows = connection.execute(

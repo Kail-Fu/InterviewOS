@@ -17,6 +17,18 @@ FastAPI backend for assessment invite and reminder flows.
 - `GET /api/questions`
 - `GET /api/questions/{id}`
 - `POST /api/new-assessments`
+- `GET /api/public/assessment/{id}`
+- `GET /api/reflection/sections`
+- `GET /api/assessments/{id}/reflection-questions`
+- `POST /download-assessment`
+- `POST /get-presigned-upload-url`
+- `PUT /local-upload/{key}`
+- `POST /notify-recording-upload`
+- `POST /api/recording/start-multipart-upload`
+- `POST /api/recording/upload-part`
+- `POST /api/recording/complete-multipart-upload`
+- `POST /api/recording/abort-upload`
+- `POST /upload-zip`
 - `GET /health`
 
 ## Zero-Account Local Mode (No AWS Required)

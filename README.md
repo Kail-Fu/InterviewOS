@@ -134,7 +134,12 @@ A bundled sample assessment is included so you can test the full flow immediatel
   * `GET /api/assessments/{id}`
   * `POST /api/invite/bulk` and `POST /api/invite/resend` now support `assessmentId` / `candidateId`
   * resend UX polish: success toast + status label rendered as `resent at <timestamp>`
-* candidate route placeholder at `/take-assessment` (reserved for upcoming full candidate flow)
+* candidate flow baseline at `/take-assessment?token=...` using copied `Assessment.js` recording pipeline with compatibility endpoints:
+  * `GET /api/public/assessment/{id}`
+  * `GET /api/reflection/sections`
+  * `POST /get-presigned-upload-url`, `PUT /local-upload/{key}`, `POST /notify-recording-upload`
+  * `POST /api/recording/start-multipart-upload`, `POST /api/recording/upload-part`, `POST /api/recording/complete-multipart-upload`
+  * `POST /upload-zip`, `POST /download-assessment`
 
 ---
 
@@ -154,8 +159,8 @@ For development details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Planned next steps:
 
-* candidate execution flow parity (`Assessment` / `TakeAssessment`)
-* submission upload pipeline and recording multipart pipeline
+* recording reliability hardening for multipart and resume/error handling
+* submission/report wiring from candidate completion to reviewer report
 * structured candidate report viewing parity (`newreport`)
 * automated evaluation and rubric scoring
 * ATS and webhook integrations
@@ -164,7 +169,7 @@ Planned next steps:
 
 ## Status
 
-InterviewOS is early stage and moving quickly. Core migration is currently through assessment-result + invite-management foundation (`PR-06`) with invite flow, provider architecture, dashboard listing, and creation/result paths in place.
+InterviewOS is early stage and moving quickly. Core migration is currently through the candidate-flow baseline with copied assessment recording logic plus local compatibility APIs, alongside invite, dashboard, and assessment creation/result flows.
 
 If you try it and hit sharp edges, please open an issue. Feature requests and PRs are welcome.
 

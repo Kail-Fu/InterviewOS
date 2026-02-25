@@ -6,6 +6,7 @@ from app.services.assessment import (
     send_assessment_email,
 )
 from app.services.assessment_store import add_or_update_candidate, get_candidate_by_id
+from app.services.assessment_store import get_candidate_by_assessment_and_email
 from app.services.invite_store import (
     ACTIVE_STATUSES,
     InviteRecord,
@@ -21,10 +22,20 @@ def _invite_url(token: str, settings: Settings) -> str:
 
 
 def _to_public_invite(invite: InviteRecord, settings: Settings) -> dict[str, str | int | None]:
+    candidate_name = None
+    if invite.assessment_id is not None:
+        candidate = get_candidate_by_assessment_and_email(
+            settings, assessment_id=invite.assessment_id, email=invite.email
+        )
+        if candidate is not None:
+            candidate_name = candidate.name
+
     return {
         "id": invite.id,
         "email": invite.email,
+        "name": candidate_name,
         "token": invite.token,
+        "assessmentId": invite.assessment_id,
         "status": invite.status,
         "createdAt": invite.created_at,
         "expiresAt": invite.expires_at,
@@ -42,7 +53,13 @@ def create_and_send_invite(
     candidate_name: str | None = None,
 ) -> dict[str, str | int | None]:
     normalized_email = email.strip().lower()
-    invite = create_invite(normalized_email, settings, status="invited", supersede_existing=True)
+    invite = create_invite(
+        normalized_email,
+        settings,
+        assessment_id=assessment_id,
+        status="invited",
+        supersede_existing=True,
+    )
     send_assessment_email(normalized_email, _invite_url(invite.token, settings), settings)
     if assessment_id is not None:
         add_or_update_candidate(
@@ -88,6 +105,7 @@ def resend_invite(
     resent = create_invite(
         source_invite.email,
         settings,
+        assessment_id=assessment_id if assessment_id is not None else source_invite.assessment_id,
         status="resent",
         resent_from_token=source_invite.token,
         supersede_existing=True,
@@ -114,6 +132,10 @@ def verify_invite(token: str, settings: Settings) -> dict[str, object]:
         "valid": is_active,
         "invite": _to_public_invite(invite, settings),
     }
+    if invite.status == "expired":
+        payload["expired"] = True
+    if invite.status == "taken":
+        payload["taken"] = True
     if is_active:
         payload["assessmentDownloadUrl"] = generate_assessment_download_link(settings)
     return payload

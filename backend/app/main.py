@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api.assessment import legacy_router, router as assessment_router
+from app.api.candidate import router as candidate_router
 from app.api.dashboard import router as dashboard_router
 from app.api.invite import router as invite_router
 from app.core.config import get_settings
@@ -35,6 +36,7 @@ app.include_router(assessment_router)
 app.include_router(legacy_router)
 app.include_router(invite_router)
 app.include_router(dashboard_router)
+app.include_router(candidate_router)
 
 
 @app.get("/health")

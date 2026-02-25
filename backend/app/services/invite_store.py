@@ -14,6 +14,7 @@ class InviteRecord:
     id: int
     email: str
     token: str
+    assessment_id: int | None
     status: str
     created_at: str
     expires_at: str
@@ -50,6 +51,7 @@ def init_store(settings: Settings) -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT NOT NULL,
                 token TEXT NOT NULL UNIQUE,
+                assessment_id INTEGER,
                 status TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 expires_at TEXT NOT NULL,
@@ -59,6 +61,9 @@ def init_store(settings: Settings) -> None:
             )
             """
         )
+        cols = {str(row["name"]) for row in connection.execute("PRAGMA table_info(invites)").fetchall()}
+        if "assessment_id" not in cols:
+            connection.execute("ALTER TABLE invites ADD COLUMN assessment_id INTEGER")
         connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_invites_email_created_at ON invites(email, created_at DESC)"
         )
@@ -70,6 +75,7 @@ def _row_to_record(row: sqlite3.Row) -> InviteRecord:
         id=int(row["id"]),
         email=str(row["email"]),
         token=str(row["token"]),
+        assessment_id=row["assessment_id"],
         status=str(row["status"]),
         created_at=str(row["created_at"]),
         expires_at=str(row["expires_at"]),
@@ -127,6 +133,7 @@ def create_invite(
     email: str,
     settings: Settings,
     *,
+    assessment_id: int | None = None,
     status: str = "invited",
     resent_from_token: str | None = None,
     supersede_existing: bool = True,
@@ -149,10 +156,10 @@ def create_invite(
 
         cursor = connection.execute(
             """
-            INSERT INTO invites (email, token, status, created_at, expires_at, resent_from_token)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO invites (email, token, assessment_id, status, created_at, expires_at, resent_from_token)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (email, token, status, _iso(now), _iso(expires_at), resent_from_token),
+            (email, token, assessment_id, status, _iso(now), _iso(expires_at), resent_from_token),
         )
         invite_id = int(cursor.lastrowid)
         row = connection.execute("SELECT * FROM invites WHERE id = ?", (invite_id,)).fetchone()
