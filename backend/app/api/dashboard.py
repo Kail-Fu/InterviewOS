@@ -37,6 +37,7 @@ def get_assessments(settings: Settings = Depends(get_settings)):
                 "questionId": item.question_id,
                 "jobLink": item.job_link,
                 "jobDesc": item.job_desc,
+                "assessmentType": item.assessment_type,
             }
             for item in assessments
         ]
@@ -66,6 +67,7 @@ def get_assessment_detail(assessment_id: int, settings: Settings = Depends(get_s
         "questionId": assessment.question_id,
         "jobLink": assessment.job_link,
         "jobDesc": assessment.job_desc,
+        "assessmentType": assessment.assessment_type,
         "question": (
             {
                 "id": question.id,
@@ -119,6 +121,7 @@ def get_questions(settings: Settings = Depends(get_settings)):
             "language": item.language,
             "overview": item.overview,
             "estimatedTime": item.estimated_time,
+            "assessmentType": item.assessment_type,
         }
         for item in questions
     ]
@@ -139,6 +142,7 @@ def get_question_by_id(question_id: int, settings: Settings = Depends(get_settin
         "language": question.language,
         "overview": question.overview,
         "estimatedTime": question.estimated_time,
+        "assessmentType": question.assessment_type,
     }
 
 

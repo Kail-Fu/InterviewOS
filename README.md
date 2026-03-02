@@ -140,6 +140,13 @@ A bundled sample assessment is included so you can test the full flow immediatel
   * `POST /get-presigned-upload-url`, `PUT /local-upload/{key}`, `POST /notify-recording-upload`
   * `POST /api/recording/start-multipart-upload`, `POST /api/recording/upload-part`, `POST /api/recording/complete-multipart-upload`
   * `POST /upload-zip`, `POST /download-assessment`
+* report experience baseline:
+  * report route at `/report/:id` backed by persisted candidate report payloads from local artifacts
+  * report API compatibility endpoint: `GET /report/{id}`
+  * assessment-result action now includes `View Report`
+  * `POST /upload-zip` now triggers assessment-linked background scoring dispatch and persists report records in local SQLite
+  * local screen-time analyzer hook is enabled for uploaded workflow recordings (duration-based baseline in OSS mode)
+  * candidate completion currently lands on a loading screen with a report link while background scoring finalizes
 
 ---
 
@@ -148,7 +155,7 @@ A bundled sample assessment is included so you can test the full flow immediatel
 InterviewOS is split into:
 
 * `frontend/`: candidate and admin UI
-* `backend/`: API, invite lifecycle, local SQLite state, assessment packaging, and core workflow
+* `backend/`: API, invite lifecycle, local SQLite state, assessment packaging, and report scoring pipeline
 * `docker-compose.yml`: local end-to-end dev environment (including Mailpit)
 
 For development details, see [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -160,8 +167,10 @@ For development details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 Planned next steps:
 
 * recording reliability hardening for multipart and resume/error handling
-* submission/report wiring from candidate completion to reviewer report
-* structured candidate report viewing parity (`newreport`)
+* deepen report parity (`newreport`) with richer diff/code-review panels and media playback
+* tighten candidate-to-report linkage so completion always resolves to the correct report id
+* replace loading-page handoff with report-ready polling and automatic redirect once scoring completes
+* expand evaluator parity from baseline checks to old-repo full autograder/test-case flows by assessment type
 * automated evaluation and rubric scoring
 * ATS and webhook integrations
 
@@ -169,7 +178,7 @@ Planned next steps:
 
 ## Status
 
-InterviewOS is early stage and moving quickly. Core migration is currently through the candidate-flow baseline with copied assessment recording logic plus local compatibility APIs, alongside invite, dashboard, and assessment creation/result flows.
+InterviewOS is early stage and moving quickly. Core migration currently includes invite, dashboard, assessment creation/result, candidate assessment flow, and baseline report generation/viewing parity in local mode.
 
 If you try it and hit sharp edges, please open an issue. Feature requests and PRs are welcome.
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Assessment from './Assessment'
+import ReportPage from './pages/Report'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
@@ -14,6 +15,7 @@ function apiUrl(path) {
 export default function App() {
   const path = typeof window !== 'undefined' ? window.location.pathname : '/'
   const assessmentResultMatch = path.match(/^\/assessment_result\/(\d+)$/)
+  const reportMatch = path.match(/^\/report\/(.+)$/)
   const loadingMatch = path.match(/^\/[^/]+\/loading\/(.+)$/)
 
   if (path === '/dashboard') {
@@ -22,6 +24,10 @@ export default function App() {
 
   if (assessmentResultMatch) {
     return <AdminShell><AssessmentResultPage assessmentId={Number(assessmentResultMatch[1])} /></AdminShell>
+  }
+
+  if (reportMatch) {
+    return <AdminShell><ReportPage reportId={reportMatch[1]} /></AdminShell>
   }
 
   if (loadingMatch) {
@@ -396,8 +402,92 @@ function QuestionSelectionPage() {
 
   const [questions, setQuestions] = useState([])
   const [selected, setSelected] = useState(null)
+  const [previewQuestion, setPreviewQuestion] = useState(null)
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
+
+  const QUESTION_DETAILS = {
+    'Users API': {
+      overview:
+        'Work in a production-style backend and deliver robust API behavior under realistic engineering constraints.',
+      detailedDescription:
+        'You will work in an existing backend codebase and implement practical API changes under realistic constraints. This measures implementation quality, debugging, and API design judgment.',
+      tasks: [
+        { title: 'Fix API edge cases', description: 'Handle malformed/invalid identifiers and return correct status codes.' },
+        { title: 'Extend filtering behavior', description: 'Support robust query filtering behavior and predictable response shape.' },
+        { title: 'Implement inactive-user logic', description: 'Add endpoint logic and validate behavior with deterministic tests.' },
+      ],
+      skillsTested: ['Node.js', 'Express', 'REST API', 'Debugging', 'Testing'],
+      evaluationCriteria: [
+        'Endpoint correctness and status code behavior',
+        'Readability and maintainability of implementation',
+        'Edge-case handling and defensive logic',
+        'Testing completeness and reliability',
+      ],
+      deliverables: ['Updated backend implementation', 'Passing test evidence', 'Clear submission package'],
+      allowedResources: 'Public documentation, package references, and your local development tooling.',
+    },
+    'Supreme Court Q&A RAG System': {
+      overview:
+        'Design and implement a retrieval-augmented generation system that returns grounded legal Q&A answers.',
+      detailedDescription:
+        'Build a retrieval-augmented QA workflow over legal-style material, with focus on retrieval quality, answer grounding, and system design decisions.',
+      tasks: [
+        { title: 'Ingest and index source material', description: 'Set up retrieval pipeline and document chunking/index strategy.' },
+        { title: 'Implement answer generation flow', description: 'Return grounded answers with strong retrieval-to-generation linkage.' },
+        { title: 'Handle failure/edge behavior', description: 'Provide deterministic behavior for weak retrieval or ambiguous queries.' },
+      ],
+      skillsTested: ['RAG Systems', 'LLM App Design', 'Retrieval', 'Prompting', 'Evaluation'],
+      evaluationCriteria: [
+        'Grounding quality and retrieval relevance',
+        'System robustness and error handling',
+        'Code clarity and architecture choices',
+        'Reasoning quality in final reflection',
+      ],
+      deliverables: ['Working RAG implementation', 'Runnable instructions', 'Submission archive + reflection'],
+      allowedResources: 'Public documentation, package references, and your local development tooling.',
+    },
+    'Named Entity Recognition (NER) - Product Attributes': {
+      overview:
+        'Train and evaluate a practical NER workflow focused on extracting product attributes from real-world text.',
+      detailedDescription:
+        'Train/evaluate an NER workflow focused on product attributes and explain model behavior across in-domain and out-of-domain data.',
+      tasks: [
+        { title: 'Implement training/evaluation', description: 'Train model and compute meaningful evaluation metrics.' },
+        { title: 'Analyze ID vs OOD behavior', description: 'Compare quality across in-domain and out-of-domain inputs.' },
+        { title: 'Document tradeoffs and next steps', description: 'Explain model limitations and practical improvements.' },
+      ],
+      skillsTested: ['NER', 'ML Evaluation', 'Error Analysis', 'Python', 'Modeling'],
+      evaluationCriteria: [
+        'Metric quality and interpretation',
+        'Clarity of modeling decisions',
+        'Practicality of improvements proposed',
+        'Submission completeness and reproducibility',
+      ],
+      deliverables: ['Training/evaluation artifact', 'Evaluation outputs', 'Submission archive + reflection'],
+      allowedResources: 'Public documentation, package references, and your local development tooling.',
+    },
+    'Insurance Document Processor - LlamaIndex API': {
+      overview:
+        'Build a document-to-JSON extraction pipeline for insurance records with stable schema-aligned outputs.',
+      detailedDescription:
+        'Process insurance-style documents into structured JSON and produce stable extraction behavior with schema-aligned outputs.',
+      tasks: [
+        { title: 'Implement extraction pipeline', description: 'Build parsing/extraction flow for target fields.' },
+        { title: 'Constrain outputs to schema', description: 'Ensure deterministic and valid JSON outputs.' },
+        { title: 'Improve reliability', description: 'Handle malformed or ambiguous inputs robustly.' },
+      ],
+      skillsTested: ['LlamaIndex', 'Information Extraction', 'JSON Schema', 'Backend Engineering'],
+      evaluationCriteria: [
+        'Extraction correctness and consistency',
+        'Schema adherence and output quality',
+        'Robustness to input variation',
+        'Code quality and maintainability',
+      ],
+      deliverables: ['Working processor implementation', 'Structured JSON outputs', 'Submission archive + reflection'],
+      allowedResources: 'Public documentation, package references, and your local development tooling.',
+    },
+  }
 
   useEffect(() => {
     async function loadQuestions() {
@@ -415,8 +505,9 @@ function QuestionSelectionPage() {
     loadQuestions()
   }, [])
 
-  async function createNewAssessment() {
-    if (!selected) {
+  async function createNewAssessment(questionOverride = null) {
+    const chosenQuestion = questionOverride || selected
+    if (!chosenQuestion) {
       setError('Please select a question first.')
       return
     }
@@ -430,7 +521,7 @@ function QuestionSelectionPage() {
           title,
           jobLink,
           jobDesc,
-          questionId: selected.id,
+          questionId: chosenQuestion.id,
         }),
       })
       if (!response.ok) {
@@ -446,6 +537,14 @@ function QuestionSelectionPage() {
     }
   }
 
+  function getDifficultyColor(difficulty) {
+    const level = (difficulty || '').toLowerCase()
+    if (level === 'easy') return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    if (level === 'medium') return 'bg-amber-50 text-amber-700 border-amber-200'
+    if (level === 'hard') return 'bg-rose-50 text-rose-700 border-rose-200'
+    return 'bg-gray-50 text-gray-700 border-gray-200'
+  }
+
   return (
     <main className="page page-wide">
       <section className="card card-wide">
@@ -455,18 +554,22 @@ function QuestionSelectionPage() {
 
         {error && <p className="error">{error}</p>}
 
-        <div className="question-grid">
+        <div style={{ display: 'grid', gap: 12 }}>
           {questions.map((question) => (
             <button
               key={question.id}
               type="button"
               className={`question-card ${selected?.id === question.id ? 'question-card-selected' : ''}`}
-              onClick={() => setSelected(question)}
+              onClick={() => {
+                setSelected(question)
+                setPreviewQuestion(question)
+              }}
             >
               <p className="question-title">{question.title}</p>
               <p className="question-meta">{question.role} • {question.language} • {question.difficulty}</p>
               <p className="question-summary">{question.summary}</p>
               <p className="question-time">Estimated: {question.estimatedTime}</p>
+              <p className="question-open">Click to preview full assessment details</p>
             </button>
           ))}
         </div>
@@ -479,6 +582,154 @@ function QuestionSelectionPage() {
             {creating ? 'Creating...' : 'Create Assessment'}
           </button>
         </div>
+
+        {previewQuestion && (
+          <div className="modal-backdrop" onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setPreviewQuestion(null)
+            }
+          }}>
+            <div className="modal-panel modal-panel-rich">
+              {(() => {
+                const details = QUESTION_DETAILS[previewQuestion.title] || {}
+                return (
+                  <>
+                    <div className="modal-header">
+                      <div>
+                        <h2 style={{ marginBottom: 8 }}>{previewQuestion.title}</h2>
+                        <div className="actions-row" style={{ marginTop: 0, marginBottom: 0 }}>
+                          <span className={`inline-btn ${getDifficultyColor(previewQuestion.difficulty)}`} style={{ border: '1px solid #d1d5db' }}>
+                            {previewQuestion.difficulty}
+                          </span>
+                          <span className="inline-btn" style={{ border: '1px solid #d1d5db' }}>{previewQuestion.role}</span>
+                          <span className="inline-btn" style={{ border: '1px solid #d1d5db' }}>{previewQuestion.language}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => setPreviewQuestion(null)}
+                        style={{ marginTop: 0 }}
+                      >
+                        Close
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'grid', gap: 14, paddingBottom: 8 }}>
+                      <div>
+                        <p className="question-title" style={{ marginBottom: 6 }}>Summary</p>
+                        <p className="question-summary" style={{ marginBottom: 0 }}>{previewQuestion.summary}</p>
+                      </div>
+
+                      {(details.overview || previewQuestion.overview) && (
+                        <div>
+                          <p className="question-title" style={{ marginBottom: 6 }}>Overview</p>
+                          <p className="question-summary" style={{ marginBottom: 0 }}>
+                            {details.overview || previewQuestion.overview}
+                          </p>
+                        </div>
+                      )}
+
+                      {(details.detailedDescription || previewQuestion.detailedDescription) && (
+                        <div className="detail-box">
+                          <p className="question-title" style={{ marginBottom: 6 }}>Detailed Description</p>
+                          <p className="question-summary" style={{ marginBottom: 0 }}>
+                            {details.detailedDescription || previewQuestion.detailedDescription}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="detail-highlight">
+                        <p style={{ margin: 0, fontWeight: 700 }}>Estimated Time</p>
+                        <p style={{ margin: '4px 0 0' }}>{previewQuestion.estimatedTime}</p>
+                      </div>
+
+                      {Array.isArray(details.tasks) && details.tasks.length > 0 && (
+                        <div>
+                          <p className="question-title" style={{ marginBottom: 8 }}>Key Tasks</p>
+                          <div style={{ display: 'grid', gap: 10 }}>
+                            {details.tasks.map((task, idx) => (
+                              <div key={`${task.title}-${idx}`} className="task-row">
+                                <span className="task-index">{idx + 1}</span>
+                                <div style={{ display: 'grid', gap: 2 }}>
+                                  <p style={{ margin: 0, fontWeight: 700 }}>{task.title}</p>
+                                  <p style={{ margin: 0, color: '#4b5563' }}>{task.description}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {Array.isArray(details.skillsTested) && details.skillsTested.length > 0 && (
+                        <div>
+                          <p className="question-title" style={{ marginBottom: 8 }}>Skills Assessed</p>
+                          <div className="actions-row" style={{ margin: 0, flexWrap: 'wrap' }}>
+                            {details.skillsTested.map((skill) => (
+                              <span key={skill} className="inline-btn" style={{ border: '1px solid #d1d5db' }}>
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {Array.isArray(details.evaluationCriteria) && details.evaluationCriteria.length > 0 && (
+                        <div>
+                          <p className="question-title" style={{ marginBottom: 8 }}>Evaluation Criteria</p>
+                          <ul style={{ margin: 0, paddingLeft: 18 }}>
+                            {details.evaluationCriteria.map((item, idx) => (
+                              <li key={`${idx}-${item}`} style={{ marginBottom: 6 }}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {Array.isArray(details.deliverables) && details.deliverables.length > 0 && (
+                        <div>
+                          <p className="question-title" style={{ marginBottom: 8 }}>Deliverables</p>
+                          <ul style={{ margin: 0, paddingLeft: 18 }}>
+                            {details.deliverables.map((item, idx) => (
+                              <li key={`${idx}-${item}`} style={{ marginBottom: 6 }}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {details.allowedResources && (
+                        <div className="detail-success">
+                          <p style={{ margin: 0, fontWeight: 700 }}>Allowed Resources</p>
+                          <p style={{ margin: '4px 0 0' }}>{details.allowedResources}</p>
+                        </div>
+                      )}
+
+                      <div className="result-header" style={{ marginBottom: 0 }}>
+                        <p style={{ margin: 0 }}><strong>Evaluation Flow:</strong> {previewQuestion.assessmentType}</p>
+                      </div>
+                    </div>
+
+                    <div className="modal-footer">
+                      <button type="button" className="secondary" onClick={() => setPreviewQuestion(null)}>
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setSelected(previewQuestion)
+                          setPreviewQuestion(null)
+                          await createNewAssessment(previewQuestion)
+                        }}
+                        disabled={creating}
+                      >
+                        {creating ? 'Creating...' : 'Confirm Selection'}
+                      </button>
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          </div>
+        )}
       </section>
     </main>
   )
@@ -734,13 +985,22 @@ function AssessmentResultPage({ assessmentId }) {
                       <td>{renderStatus(candidate)}</td>
                       <td>{new Date(candidate.invitedAt).toLocaleString()}</td>
                       <td>
-                        <button
-                          type="button"
-                          className="inline-btn"
-                          onClick={() => resendInvite(candidate)}
-                        >
-                          Resend Invite
-                        </button>
+                        <div className="actions-row" style={{ margin: 0 }}>
+                          <button
+                            type="button"
+                            className="inline-btn"
+                            onClick={() => resendInvite(candidate)}
+                          >
+                            Resend Invite
+                          </button>
+                          <button
+                            type="button"
+                            className="inline-btn"
+                            onClick={() => navigateTo(`/report/${candidate.id}`)}
+                          >
+                            View Report
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -930,13 +1190,19 @@ function TakeAssessmentGateway() {
 }
 
 function LoadingPlaceholder({ assessmentId }) {
+  const reportUrl = `/report/${assessmentId}`
+
   return (
     <main className="page">
       <section className="card">
         <p className="eyebrow">InterviewOS Candidate</p>
         <h1>Submission Received</h1>
-        <p className="subtitle">Assessment {assessmentId} submission was uploaded. Report generation UI will be released in the next iteration.</p>
-        <button type="button" onClick={() => navigateTo('/dashboard')}>Back to Dashboard</button>
+        <p className="subtitle">Assessment {assessmentId} submission was uploaded. Your report is being generated.</p>
+        <p className="subtitle">Open the report here in a few moments: <code>{reportUrl}</code></p>
+        <div className="actions-row">
+          <button type="button" onClick={() => navigateTo(reportUrl)}>Open Report</button>
+          <button type="button" className="secondary" onClick={() => navigateTo('/dashboard')}>Back to Dashboard</button>
+        </div>
       </section>
     </main>
   )
