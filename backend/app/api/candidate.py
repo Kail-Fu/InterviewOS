@@ -17,6 +17,7 @@ from app.services.assessment_store import (
     get_candidate_by_id,
     get_report_by_candidate,
     mark_candidate_submitted,
+    upsert_report,
 )
 from app.services.report_engine import run_scoring_and_store_report
 
@@ -39,7 +40,7 @@ def _find_latest_submission(settings: Settings, assessment_id: int) -> Path | No
         return None
     candidates = [
         path
-        for path in root.glob(f"{assessment_id}-*")
+        for path in root.glob(f"{assessment_id}-*.zip")
         if path.is_file()
     ]
     if not candidates:
@@ -100,6 +101,52 @@ def _report_payload_from_record(
         "reflectionRecordingKey": report.reflection_recording_key,
         "submittedAt": submitted_at,
     }
+
+
+def _init_pending_report(settings: Settings, candidate_id: int, assessment_id: int, assessment_type: str) -> None:
+    upsert_report(
+        settings,
+        candidate_id=candidate_id,
+        assessment_id=assessment_id,
+        score=None,
+        code_quality=None,
+        results=[],
+        diffs=[],
+        code_summary_bullets=["Submission received. Report generation is in progress."],
+        report_ready=False,
+        error=None,
+        assessment_type=assessment_type,
+        app_usage=[],
+        total_duration=None,
+        submission_file=None,
+        assessment_recording_key=None,
+        reflection_recording_key=None,
+    )
+
+
+def _upload_response_payload(
+    *,
+    candidate_id: int | None,
+    assessment_id: str,
+    path: str | None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "message": "Upload successful",
+        "path": path,
+        "assessmentId": assessment_id,
+    }
+    if candidate_id is None:
+        return payload
+    payload.update(
+        {
+            "candidateId": candidate_id,
+            "reportId": candidate_id,
+            "reportUrl": f"/report/{candidate_id}",
+            "loadingUrl": f"/sample/loading/{candidate_id}",
+            "reportReady": False,
+        }
+    )
+    return payload
 
 
 @router.get("/api/public/assessment/{assessment_id}")
@@ -249,7 +296,10 @@ async def upload_zip(
 ):
     dest_name = None
     if zipFile is not None:
-        file_name = f"{assessmentId}-{uuid.uuid4().hex}-{zipFile.filename}"
+        original_name = zipFile.filename or "submission.zip"
+        if not original_name.lower().endswith(".zip"):
+            original_name = f"{original_name}.zip"
+        file_name = f"{assessmentId}-{uuid.uuid4().hex}-{original_name}"
         dest = Path(settings.local_submissions_dir) / _safe_key(file_name)
         dest.parent.mkdir(parents=True, exist_ok=True)
         data = await zipFile.read()
@@ -265,11 +315,75 @@ async def upload_zip(
                 email=email,
                 name=name or None,
             )
+            assessment = get_assessment(settings, assessment_numeric)
+            assessment_type = assessment.assessment_type if assessment is not None else "default"
+            _init_pending_report(settings, candidate.id, assessment_numeric, assessment_type)
     except ValueError:
         pass
     if candidate is not None:
         background_tasks.add_task(run_scoring_and_store_report, settings, candidate)
-    return {"message": "Upload successful", "path": dest_name}
+    return _upload_response_payload(
+        candidate_id=candidate.id if candidate is not None else None,
+        assessment_id=assessmentId,
+        path=dest_name,
+    )
+
+
+@router.post("/upload-assessment4")
+async def upload_assessment4(
+    background_tasks: BackgroundTasks,
+    submissionZip: UploadFile | None = File(default=None),
+    notebookFile: UploadFile | None = File(default=None),
+    assessmentId: str = Form("default"),
+    name: str = Form(""),
+    email: str = Form(""),
+    settings: Settings = Depends(get_settings),
+):
+    if submissionZip is None:
+        raise HTTPException(status_code=400, detail="submissionZip is required")
+    if notebookFile is None:
+        raise HTTPException(status_code=400, detail="notebookFile is required")
+
+    upload_token = uuid.uuid4().hex
+    zip_name = submissionZip.filename or "submission.zip"
+    if not zip_name.lower().endswith(".zip"):
+        zip_name = f"{zip_name}.zip"
+    zip_dest_name = f"{assessmentId}-{upload_token}-{zip_name}"
+    zip_dest = Path(settings.local_submissions_dir) / _safe_key(zip_dest_name)
+    zip_dest.parent.mkdir(parents=True, exist_ok=True)
+    zip_dest.write_bytes(await submissionZip.read())
+
+    notebook_name = notebookFile.filename or "notebook.ipynb"
+    if not notebook_name.lower().endswith(".ipynb"):
+        notebook_name = f"{notebook_name}.ipynb"
+    notebook_dest_name = f"{assessmentId}-{upload_token}-{notebook_name}"
+    notebook_dest = Path(settings.local_submissions_dir) / _safe_key(notebook_dest_name)
+    notebook_dest.write_bytes(await notebookFile.read())
+
+    candidate = None
+    try:
+        assessment_numeric = int(assessmentId)
+        if email:
+            candidate = mark_candidate_submitted(
+                settings,
+                assessment_id=assessment_numeric,
+                email=email,
+                name=name or None,
+            )
+            assessment = get_assessment(settings, assessment_numeric)
+            assessment_type = assessment.assessment_type if assessment is not None else "assessment4-ner"
+            _init_pending_report(settings, candidate.id, assessment_numeric, assessment_type)
+    except ValueError:
+        pass
+
+    if candidate is not None:
+        background_tasks.add_task(run_scoring_and_store_report, settings, candidate)
+
+    return _upload_response_payload(
+        candidate_id=candidate.id if candidate is not None else None,
+        assessment_id=assessmentId,
+        path=zip_dest_name,
+    )
 
 
 @router.get("/report/{candidate_id}")
@@ -306,8 +420,6 @@ def report(candidate_id: int, settings: Settings = Depends(get_settings)):
     has_submission = submission is not None
     has_assessment_recording = assessment_recording is not None
     has_reflection_recording = reflection_recording is not None
-    has_all_artifacts = has_submission and has_assessment_recording and has_reflection_recording
-
     submission_relative = (
         str(submission.relative_to(Path(settings.local_submissions_dir))) if submission else None
     )
@@ -322,22 +434,15 @@ def report(candidate_id: int, settings: Settings = Depends(get_settings)):
         else None
     )
 
-    app_usage = [
-        {"name": "Code Editor", "duration": 2400},
-        {"name": "Browser / Docs", "duration": 1100},
-        {"name": "Terminal", "duration": 700},
-    ]
-    total_duration = sum(int(item["duration"]) for item in app_usage)
-
     if candidate.status == "submitted":
-        score = 86 if has_all_artifacts else 72
-        code_quality = 84 if has_submission else 65
-        report_ready = True
-        error = None
-    else:
+        report_ready = False
         score = None
         code_quality = None
+        error = "Report is being generated. Please refresh in a moment."
+    else:
         report_ready = False
+        score = None
+        code_quality = None
         error = "Candidate has not submitted yet."
 
     results = [
@@ -374,9 +479,9 @@ def report(candidate_id: int, settings: Settings = Depends(get_settings)):
     ]
 
     summary_bullets = [
-        "Candidate completed the invite-based assessment flow in local mode.",
-        "Report payload synthesized from local SQLite state and artifact discovery.",
-        "This report format mirrors foretoken-demo structure for migration parity.",
+        "Submission received and linked to candidate record.",
+        "Background evaluator is generating this report.",
+        "Refresh this page in a few moments.",
     ]
     if submission:
         summary_bullets.append(f"Latest submission captured at {_iso_utc(submission.stat().st_mtime)}.")
@@ -395,8 +500,8 @@ def report(candidate_id: int, settings: Settings = Depends(get_settings)):
         "reportReady": report_ready,
         "error": error,
         "assessmentType": assessment.assessment_type,
-        "appUsage": app_usage,
-        "totalDuration": total_duration,
+        "appUsage": [],
+        "totalDuration": None,
         "submissionFile": submission_relative,
         "assessmentRecordingKey": assessment_recording_relative,
         "reflectionRecordingKey": reflection_recording_relative,

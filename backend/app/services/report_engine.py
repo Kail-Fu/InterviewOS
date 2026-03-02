@@ -19,7 +19,17 @@ def _find_latest_submission(settings: Settings, assessment_id: int) -> Path | No
     root = Path(settings.local_submissions_dir)
     if not root.exists():
         return None
-    matches = [p for p in root.glob(f'{assessment_id}-*') if p.is_file()]
+    matches = [p for p in root.glob(f'{assessment_id}-*.zip') if p.is_file()]
+    if not matches:
+        return None
+    return max(matches, key=lambda p: p.stat().st_mtime)
+
+
+def _find_latest_notebook(settings: Settings, assessment_id: int) -> Path | None:
+    root = Path(settings.local_submissions_dir)
+    if not root.exists():
+        return None
+    matches = [p for p in root.glob(f'{assessment_id}-*.ipynb') if p.is_file()]
     if not matches:
         return None
     return max(matches, key=lambda p: p.stat().st_mtime)
@@ -57,8 +67,9 @@ def _detect_assessment_type(assessment_type: str | None) -> str:
 def _evaluate_submission(
     *,
     submission: Path | None,
+    notebook: Path | None,
     assessment_type: str,
-) -> tuple[int, int, list[dict[str, object]], list[str]]:
+) -> tuple[int, int, list[dict[str, object]], list[str], list[dict[str, object]]]:
     if submission is None:
         return (
             0,
@@ -72,10 +83,12 @@ def _evaluate_submission(
                 }
             ],
             ['No submission archive found.'],
+            [],
         )
 
     archive_checks: list[dict[str, object]] = []
     summary: list[str] = []
+    diffs: list[dict[str, object]] = []
     score = 40
     code_quality = 50
 
@@ -88,9 +101,22 @@ def _evaluate_submission(
             has_json = any(n.endswith('.json') for n in names)
             has_java = any(n.endswith('.java') for n in names)
             has_pom = any(Path(n).name.lower() == 'pom.xml' for n in names)
-            has_ipynb = any(n.endswith('.ipynb') for n in names)
+            has_ipynb = any(n.endswith('.ipynb') for n in names) or notebook is not None
             has_rag_marker = any('rag' in n.lower() for n in names)
             has_ner_marker = any('ner' in n.lower() for n in names)
+            has_users_api_marker = any('users-service' in n.lower() or 'server.js' in n.lower() for n in names)
+            has_retrieval_marker = any('retriev' in n.lower() or 'vector' in n.lower() for n in names)
+            has_llama_marker = any('llama' in n.lower() or 'document' in n.lower() for n in names)
+            code_files = [n for n in names if n.endswith(('.py', '.js', '.ts', '.java', '.ipynb', '.json'))]
+
+        for entry in code_files[:8]:
+            diffs.append(
+                {
+                    'path': entry,
+                    'status': 'modified',
+                    'modified': f'Submission artifact includes {entry}',
+                }
+            )
 
         archive_checks.append(
             {
@@ -124,13 +150,21 @@ def _evaluate_submission(
             score = max(20, score - 10)
 
         if assessment_type == 'assessment3-rag':
-            code_quality = 80 if has_rag_marker else 68
+            code_quality = 84 if has_rag_marker and has_retrieval_marker else 70
             archive_checks.append(
                 {
                     'name': 'RAG pipeline artifacts',
                     'status': 'pass' if has_rag_marker else 'partial',
                     'expected': 'Include retrieval/indexing or RAG-related implementation files',
                     'output': 'RAG-specific files found' if has_rag_marker else 'No explicit RAG markers found',
+                }
+            )
+            archive_checks.append(
+                {
+                    'name': 'Retrieval/index markers',
+                    'status': 'pass' if has_retrieval_marker else 'partial',
+                    'expected': 'Include retrieval/index/vector database logic',
+                    'output': 'Retrieval markers found' if has_retrieval_marker else 'No retrieval markers found',
                 }
             )
             summary.append('Assessment3 (RAG) evaluation path executed.')
@@ -152,6 +186,15 @@ def _evaluate_submission(
                     'output': 'NER markers found' if has_ner_marker else 'No explicit NER markers found',
                 }
             )
+            if notebook is not None:
+                archive_checks.append(
+                    {
+                        'name': 'Separate notebook upload',
+                        'status': 'pass',
+                        'expected': 'Assessment4 notebook uploaded as companion artifact',
+                        'output': f'Found {notebook.name}',
+                    }
+                )
             summary.append('Assessment4 (NER) evaluation path executed.')
         elif assessment_type == 'java-maven':
             code_quality = 80 if has_java and has_pom else 60
@@ -173,7 +216,7 @@ def _evaluate_submission(
             )
             summary.append('Java Maven evaluation path executed.')
         elif assessment_type == 'json-comparison':
-            code_quality = 78 if has_json else 58
+            code_quality = 82 if has_json and has_llama_marker else 60
             archive_checks.append(
                 {
                     'name': 'JSON output artifacts',
@@ -182,9 +225,25 @@ def _evaluate_submission(
                     'output': 'JSON artifacts found' if has_json else 'No JSON artifacts found',
                 }
             )
+            archive_checks.append(
+                {
+                    'name': 'Document processing markers',
+                    'status': 'pass' if has_llama_marker else 'partial',
+                    'expected': 'Include document parsing/extraction pipeline artifacts',
+                    'output': 'Document-processing markers found' if has_llama_marker else 'No extraction markers found',
+                }
+            )
             summary.append('JSON-comparison evaluation path executed.')
         else:
-            code_quality = 78 if has_source else 55
+            code_quality = 80 if has_users_api_marker else 58
+            archive_checks.append(
+                {
+                    'name': 'Users API structure',
+                    'status': 'pass' if has_users_api_marker else 'partial',
+                    'expected': 'Include users-service/server implementation artifacts',
+                    'output': 'Users API markers found' if has_users_api_marker else 'Users API markers missing',
+                }
+            )
             summary.append('Default evaluation path executed.')
 
         summary.append(f'Submission archive {submission.name} analyzed with {file_count} files.')
@@ -202,7 +261,7 @@ def _evaluate_submission(
         score = 0
         code_quality = 0
 
-    return score, code_quality, archive_checks, summary
+    return score, code_quality, archive_checks, summary, diffs
 
 
 def run_scoring_and_store_report(settings: Settings, candidate: CandidateRecord) -> None:
@@ -211,62 +270,92 @@ def run_scoring_and_store_report(settings: Settings, candidate: CandidateRecord)
         return
 
     assessment_type = _detect_assessment_type(getattr(assessment, 'assessment_type', 'default'))
-
     submission = _find_latest_submission(settings, candidate.assessment_id)
+    notebook = _find_latest_notebook(settings, candidate.assessment_id)
     recording = _find_latest_assessment_recording(settings, candidate.assessment_id)
     reflection = _find_latest_reflection_recording(settings, candidate.assessment_id)
 
-    base_score, code_quality, checks, summary = _evaluate_submission(
-        submission=submission,
-        assessment_type=assessment_type,
-    )
+    try:
+        base_score, code_quality, checks, summary, diffs = _evaluate_submission(
+            submission=submission,
+            notebook=notebook,
+            assessment_type=assessment_type,
+        )
 
-    app_usage = []
-    total_duration = 0
-    if recording is not None:
-        app_usage, total_duration = analyze_screen_time(recording)
+        app_usage = []
+        total_duration = 0
+        if recording is not None:
+            app_usage, total_duration = analyze_screen_time(recording)
 
-    checks.append(
-        {
-            'name': 'Workflow recording',
-            'status': 'pass' if recording else 'partial',
-            'expected': 'Upload full-screen workflow recording',
-            'output': recording.name if recording else 'No workflow recording found',
-        }
-    )
-    checks.append(
-        {
-            'name': 'Reflection recording',
-            'status': 'pass' if reflection else 'partial',
-            'expected': 'Upload reflection response recording',
-            'output': reflection.name if reflection else 'No reflection recording found',
-        }
-    )
+        checks.append(
+            {
+                'name': 'Workflow recording',
+                'status': 'pass' if recording else 'partial',
+                'expected': 'Upload full-screen workflow recording',
+                'output': recording.name if recording else 'No workflow recording found',
+            }
+        )
+        checks.append(
+            {
+                'name': 'Reflection recording',
+                'status': 'pass' if reflection else 'partial',
+                'expected': 'Upload reflection response recording',
+                'output': reflection.name if reflection else 'No reflection recording found',
+            }
+        )
 
-    if recording and total_duration > 0:
-        summary.append(f'Screen-time analyzer processed recording: {total_duration}s total duration.')
+        if recording and total_duration > 0:
+            summary.append(f'Screen-time analyzer processed recording: {total_duration}s total duration.')
+        if notebook is not None and assessment_type == 'assessment4-ner':
+            summary.append(f'Assessment4 companion notebook detected: {notebook.name}.')
 
-    final_score = base_score
-    if recording:
-        final_score = min(100, final_score + 5)
-    if reflection:
-        final_score = min(100, final_score + 5)
+        final_score = base_score
+        if recording:
+            final_score = min(100, final_score + 5)
+        if reflection:
+            final_score = min(100, final_score + 5)
 
-    upsert_report(
-        settings,
-        candidate_id=candidate.id,
-        assessment_id=candidate.assessment_id,
-        score=final_score,
-        code_quality=code_quality,
-        results=checks,
-        diffs=[],
-        code_summary_bullets=summary,
-        report_ready=True,
-        error=None,
-        assessment_type=assessment_type,
-        app_usage=app_usage,
-        total_duration=total_duration,
-        submission_file=_safe_relative(submission, Path(settings.local_submissions_dir)) if submission else None,
-        assessment_recording_key=_safe_relative(recording, Path(settings.local_recordings_dir)) if recording else None,
-        reflection_recording_key=_safe_relative(reflection, Path(settings.local_recordings_dir)) if reflection else None,
-    )
+        upsert_report(
+            settings,
+            candidate_id=candidate.id,
+            assessment_id=candidate.assessment_id,
+            score=final_score,
+            code_quality=code_quality,
+            results=checks,
+            diffs=diffs,
+            code_summary_bullets=summary,
+            report_ready=True,
+            error=None,
+            assessment_type=assessment_type,
+            app_usage=app_usage,
+            total_duration=total_duration,
+            submission_file=_safe_relative(submission, Path(settings.local_submissions_dir)) if submission else None,
+            assessment_recording_key=_safe_relative(recording, Path(settings.local_recordings_dir)) if recording else None,
+            reflection_recording_key=_safe_relative(reflection, Path(settings.local_recordings_dir)) if reflection else None,
+        )
+    except Exception as exc:
+        upsert_report(
+            settings,
+            candidate_id=candidate.id,
+            assessment_id=candidate.assessment_id,
+            score=0,
+            code_quality=0,
+            results=[
+                {
+                    'name': 'Report generation',
+                    'status': 'fail',
+                    'expected': 'Evaluate submission and produce report payload',
+                    'output': f'Failed with error: {exc}',
+                }
+            ],
+            diffs=[],
+            code_summary_bullets=['Report generation failed. Please inspect backend logs.'],
+            report_ready=True,
+            error=str(exc),
+            assessment_type=assessment_type,
+            app_usage=[],
+            total_duration=None,
+            submission_file=_safe_relative(submission, Path(settings.local_submissions_dir)) if submission else None,
+            assessment_recording_key=_safe_relative(recording, Path(settings.local_recordings_dir)) if recording else None,
+            reflection_recording_key=_safe_relative(reflection, Path(settings.local_recordings_dir)) if reflection else None,
+        )

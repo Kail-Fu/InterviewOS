@@ -31,7 +31,7 @@ export default function App() {
   }
 
   if (loadingMatch) {
-    return <LoadingPlaceholder assessmentId={loadingMatch[1]} />
+    return <AdminShell><LoadingPlaceholder reportId={loadingMatch[1]} /></AdminShell>
   }
 
   if (path === '/new-assessment') {
@@ -1074,15 +1074,23 @@ function AssessmentResultPage({ assessmentId }) {
 }
 
 function TakeAssessmentGateway() {
-  const token = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search).get('token')
-    : null
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const token = searchParams ? searchParams.get('token') : null
+  const preview = searchParams ? searchParams.get('preview') : null
   const [state, setState] = useState('loading')
   const [invite, setInvite] = useState(null)
   const [assessmentData, setAssessmentData] = useState(null)
   const [message, setMessage] = useState('')
 
   useEffect(() => {
+    if (preview && ['loading', 'invalid', 'expired', 'taken', 'resent'].includes(preview)) {
+      setState(preview)
+      if (preview === 'resent') {
+        setMessage('A new link has been sent to your email.')
+      }
+      return
+    }
+
     async function verify() {
       if (!token) {
         setState('invalid')
@@ -1124,7 +1132,7 @@ function TakeAssessmentGateway() {
       }
     }
     verify()
-  }, [token])
+  }, [token, preview])
 
   async function resend() {
     try {
@@ -1154,52 +1162,183 @@ function TakeAssessmentGateway() {
     )
   }
 
+  const stateCopy = {
+    loading: {
+      badge: 'Verifying',
+      title: 'Verifying your invitation',
+      subtitle: 'Checking your assessment access and preparing your session.',
+      hint: 'Please wait a moment.',
+    },
+    invalid: {
+      badge: 'Action needed',
+      title: 'Invalid or missing link',
+      subtitle: 'Please check your invitation email or contact your recruiter.',
+      hint: 'If this looks wrong, ask the sender for a new invitation.',
+    },
+    expired: {
+      badge: 'Link expired',
+      title: 'This link has expired',
+      subtitle: 'Your assessment link expired. Request a fresh link to continue.',
+      hint: 'You can request a new link below.',
+    },
+    taken: {
+      badge: 'Already used',
+      title: 'Assessment already started',
+      subtitle: 'This invitation link has already been used for an active attempt.',
+      hint: 'Please contact who sent you this assessment.',
+    },
+    resent: {
+      badge: 'Email sent',
+      title: 'New link sent',
+      subtitle: message || 'A new invitation link has been sent.',
+      hint: 'Please check your inbox and spam folder.',
+    },
+  }
+
+  const currentCopy = stateCopy[state] || stateCopy.loading
+
   return (
-    <main className="page">
-      <section className="card">
-        <p className="eyebrow">InterviewOS Candidate</p>
-        {state === 'loading' && <h1>Verifying invite...</h1>}
-        {state === 'invalid' && (
-          <>
-            <h1>Invalid or missing link</h1>
-            <p className="subtitle">Please check your invitation email or contact your recruiter.</p>
-          </>
-        )}
-        {state === 'expired' && (
-          <>
-            <h1>This link has expired</h1>
-            <p className="subtitle">Your assessment link expired. Request a new one.</p>
-            <button type="button" onClick={resend}>Send New Link</button>
-          </>
-        )}
-        {state === 'taken' && (
-          <>
-            <h1>Assessment already started</h1>
-            <p className="subtitle">This assessment link has already been used.</p>
-          </>
-        )}
-        {state === 'resent' && (
-          <>
-            <h1>New link sent</h1>
-            <p className="subtitle">{message}</p>
-          </>
-        )}
-      </section>
-    </main>
+    <div className="io-admin">
+      <main className="page">
+        <section className="card candidate-status-card">
+          <div className="candidate-status-header">
+            <p className="eyebrow">InterviewOS Candidate</p>
+            <span className="status-pill">{currentCopy.badge}</span>
+          </div>
+          <h1>{currentCopy.title}</h1>
+          <p className="subtitle">{currentCopy.subtitle}</p>
+          <p className="candidate-status-hint">{currentCopy.hint}</p>
+
+          {state === 'loading' && (
+            <div className="candidate-progress-track" aria-hidden>
+              <div className="candidate-progress-bar" />
+            </div>
+          )}
+
+          <div className="candidate-meta-block">
+            <p><strong>Invite token:</strong> {token ? 'present' : 'missing'}</p>
+            <p><strong>Need help?</strong> Please contact who sent you this assessment.</p>
+          </div>
+
+          {state === 'expired' && (
+            <div className="actions-row candidate-status-actions">
+              <button type="button" onClick={resend}>Send New Link</button>
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
   )
 }
 
-function LoadingPlaceholder({ assessmentId }) {
-  const reportUrl = `/report/${assessmentId}`
+function LoadingPlaceholder({ reportId }) {
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const preview = searchParams ? searchParams.get('preview') : null
+  const reportUrl = `/report/${reportId}`
+  const [status, setStatus] = useState('checking')
+  const [error, setError] = useState('')
+  const [lastUpdate, setLastUpdate] = useState('')
+  const [pollCount, setPollCount] = useState(0)
+
+  useEffect(() => {
+    if (preview && ['checking', 'processing', 'ready', 'error'].includes(preview)) {
+      setStatus(preview)
+      setError(preview === 'error' ? 'Preview mode: unable to reach report endpoint.' : '')
+      setLastUpdate(new Date().toLocaleTimeString())
+      setPollCount(preview === 'processing' ? 3 : 0)
+      return
+    }
+
+    let cancelled = false
+    let timer = null
+
+    async function pollReport() {
+      if (cancelled) return
+      try {
+        const response = await fetch(apiUrl(`/report/${encodeURIComponent(String(reportId || ''))}`))
+        if (!response.ok) {
+          if (!cancelled) {
+            setStatus('processing')
+            setError('')
+          }
+          timer = window.setTimeout(pollReport, 3000)
+          return
+        }
+        const payload = await response.json()
+        if (cancelled) return
+        setPollCount((count) => count + 1)
+        setLastUpdate(new Date().toLocaleTimeString())
+        if (payload.reportReady) {
+          setStatus('ready')
+          window.setTimeout(() => {
+            if (!cancelled) {
+              navigateTo(reportUrl)
+            }
+          }, 900)
+          return
+        }
+        setStatus('processing')
+        setError('')
+        timer = window.setTimeout(pollReport, 3000)
+      } catch (pollError) {
+        if (!cancelled) {
+          setStatus('error')
+          setError(pollError.message || 'Failed to check report status')
+        }
+        timer = window.setTimeout(pollReport, 4000)
+      }
+    }
+
+    pollReport()
+    return () => {
+      cancelled = true
+      if (timer) {
+        window.clearTimeout(timer)
+      }
+    }
+  }, [reportId, reportUrl, preview])
+
+  const statusTitle = status === 'ready'
+    ? 'Report ready'
+    : status === 'error'
+      ? 'Report processing delayed'
+      : 'Generating your report'
+  const statusBadge = status === 'ready'
+    ? 'Completed'
+    : status === 'error'
+      ? 'Retrying'
+      : 'In progress'
 
   return (
     <main className="page">
-      <section className="card">
-        <p className="eyebrow">InterviewOS Candidate</p>
-        <h1>Submission Received</h1>
-        <p className="subtitle">Assessment {assessmentId} submission was uploaded. Your report is being generated.</p>
-        <p className="subtitle">Open the report here in a few moments: <code>{reportUrl}</code></p>
-        <div className="actions-row">
+      <section className="card candidate-status-card">
+        <div className="candidate-status-header">
+          <p className="eyebrow">InterviewOS Candidate</p>
+          <span className="status-pill">{statusBadge}</span>
+        </div>
+        <h1>{statusTitle}</h1>
+        <p className="subtitle">Your submission was uploaded. We are preparing your final evaluation report.</p>
+
+        {status !== 'ready' && (
+          <div className="candidate-progress-track" aria-hidden>
+            <div className="candidate-progress-bar" />
+          </div>
+        )}
+
+        <div className="candidate-meta-block">
+          <p><strong>Report link:</strong> <code>{reportUrl}</code></p>
+          {status === 'processing' && (
+            <p>
+              <strong>Status:</strong> processing in background
+              {pollCount > 0 ? ` (checked ${pollCount} time${pollCount > 1 ? 's' : ''})` : ''}.
+            </p>
+          )}
+          {status === 'ready' && <p><strong>Status:</strong> completed, redirecting now.</p>}
+          {lastUpdate && <p><strong>Last checked:</strong> {lastUpdate}</p>}
+        </div>
+
+        {status === 'error' && <p className="error">Unable to refresh status right now. {error}</p>}
+        <div className="actions-row candidate-status-actions">
           <button type="button" onClick={() => navigateTo(reportUrl)}>Open Report</button>
           <button type="button" className="secondary" onClick={() => navigateTo('/dashboard')}>Back to Dashboard</button>
         </div>

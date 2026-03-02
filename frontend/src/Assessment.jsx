@@ -1783,7 +1783,7 @@ const finalizeSectionRecording = async () => {
       }
       
       const endpoint = isAssessment4 ? '/upload-assessment4' : '/upload-zip';
-      await axios.post(`${API_BASE_URL}${endpoint}`, formData, {
+      const uploadResponse = await axios.post(`${API_BASE_URL}${endpoint}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -1793,8 +1793,8 @@ const finalizeSectionRecording = async () => {
       });
       console.log('Upload success');
       setUploadSuccess(true);
-      //navigate(`/loading/${userInfo.assessmentId}`);
-      navigate(`/${company}/loading/${userInfo.assessmentId}`);
+      const reportTarget = uploadResponse?.data?.reportId || uploadResponse?.data?.candidateId || userInfo.assessmentId;
+      navigate(`/${company}/loading/${reportTarget}`);
       
 
     } catch (err) {

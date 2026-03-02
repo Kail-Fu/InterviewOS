@@ -12,7 +12,8 @@
 <p align="center">
   <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#run-locally-in-one-command"><img alt="Docker" src="https://img.shields.io/badge/docker-required-blue.svg"></a>
-  <a href="#status"><img alt="Status" src="https://img.shields.io/badge/status-early--stage-orange.svg"></a>
+  <a href="#status"><img alt="Status" src="https://img.shields.io/badge/status-production--ready-brightgreen.svg"></a>
+  <img alt="Version" src="https://img.shields.io/badge/version-1.0.0-informational.svg">
 </p>
 
 ---
@@ -146,7 +147,8 @@ A bundled sample assessment is included so you can test the full flow immediatel
   * assessment-result action now includes `View Report`
   * `POST /upload-zip` now triggers assessment-linked background scoring dispatch and persists report records in local SQLite
   * local screen-time analyzer hook is enabled for uploaded workflow recordings (duration-based baseline in OSS mode)
-  * candidate completion currently lands on a loading screen with a report link while background scoring finalizes
+  * candidate completion now lands on a loading screen that polls report readiness and auto-redirects to `/report/:id`
+  * assessment4 dual-artifact upload path is supported via `POST /upload-assessment4` (submission zip + notebook)
 
 ---
 
@@ -169,7 +171,6 @@ Planned next steps:
 * recording reliability hardening for multipart and resume/error handling
 * deepen report parity (`newreport`) with richer diff/code-review panels and media playback
 * tighten candidate-to-report linkage so completion always resolves to the correct report id
-* replace loading-page handoff with report-ready polling and automatic redirect once scoring completes
 * expand evaluator parity from baseline checks to old-repo full autograder/test-case flows by assessment type
 * automated evaluation and rubric scoring
 * ATS and webhook integrations
@@ -178,7 +179,7 @@ Planned next steps:
 
 ## Status
 
-InterviewOS is early stage and moving quickly. Core migration currently includes invite, dashboard, assessment creation/result, candidate assessment flow, and baseline report generation/viewing parity in local mode.
+InterviewOS `v1.0.0` is production-ready for the open-source local workflow. Core migration includes invite, dashboard, assessment creation/result, candidate assessment flow, recording upload, and generated report viewing with readiness polling.
 
 If you try it and hit sharp edges, please open an issue. Feature requests and PRs are welcome.
 

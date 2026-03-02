@@ -28,6 +28,9 @@ export default function ReportPage({ reportId }) {
   const endpoint = useMemo(() => apiUrl(`/report/${encodeURIComponent(String(reportId || ''))}`), [reportId])
 
   useEffect(() => {
+    let cancelled = false
+    let timer = null
+
     async function loadReport() {
       if (!reportId) {
         setError('Missing report id.')
@@ -44,7 +47,13 @@ export default function ReportPage({ reportId }) {
           throw new Error(payload.detail || payload.error || 'Failed to load report')
         }
         const payload = await response.json()
+        if (cancelled) {
+          return
+        }
         setReport(payload)
+        if (!payload.reportReady) {
+          timer = window.setTimeout(loadReport, 3000)
+        }
       } catch (loadError) {
         setError(loadError.message || 'Failed to load report')
       } finally {
@@ -53,6 +62,12 @@ export default function ReportPage({ reportId }) {
     }
 
     loadReport()
+    return () => {
+      cancelled = true
+      if (timer) {
+        window.clearTimeout(timer)
+      }
+    }
   }, [endpoint, reportId])
 
   return (
@@ -78,6 +93,11 @@ export default function ReportPage({ reportId }) {
 
         {!loading && !error && report && (
           <div className="space-y-6">
+            {!report.reportReady && (
+              <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+                <p className="text-sm font-medium text-amber-900">Report generation is in progress. This page auto-refreshes every few seconds.</p>
+              </section>
+            )}
             <section className="grid gap-4 md:grid-cols-4">
               <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm md:col-span-2">
                 <h2 className="text-sm font-semibold text-gray-500">Candidate</h2>
