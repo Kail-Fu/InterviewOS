@@ -12,7 +12,6 @@
 <p align="center">
   <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#run-locally-in-one-command"><img alt="Docker" src="https://img.shields.io/badge/docker-required-blue.svg"></a>
-  <a href="#status"><img alt="Status" src="https://img.shields.io/badge/status-production--ready-brightgreen.svg"></a>
   <img alt="Version" src="https://img.shields.io/badge/version-1.0.0-informational.svg">
 </p>
 
