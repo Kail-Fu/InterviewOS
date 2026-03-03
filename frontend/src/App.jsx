@@ -1135,8 +1135,9 @@ function TakeAssessmentGateway() {
   }, [token, preview])
 
   async function resend() {
+    setMessage('')
     try {
-      await fetch(apiUrl('/api/invite/resend'), {
+      const response = await fetch(apiUrl('/api/invite/resend'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1144,10 +1145,15 @@ function TakeAssessmentGateway() {
           assessmentId: invite?.assessmentId || null,
         }),
       })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        const detail = typeof payload.detail === 'string' ? payload.detail : 'Failed to resend. Please contact your recruiter.'
+        throw new Error(detail)
+      }
       setState('resent')
       setMessage('A new link has been sent to your email.')
-    } catch {
-      setMessage('Failed to resend. Please contact your recruiter.')
+    } catch (error) {
+      setMessage(error?.message || 'Failed to resend. Please contact your recruiter.')
     }
   }
 
@@ -1178,7 +1184,7 @@ function TakeAssessmentGateway() {
     expired: {
       badge: 'Link expired',
       title: 'This link has expired',
-      subtitle: 'Your assessment link expired. Request a fresh link to continue.',
+      subtitle: message || 'Your assessment link expired. Request a fresh link to continue.',
       hint: 'You can request a new link below.',
     },
     taken: {
