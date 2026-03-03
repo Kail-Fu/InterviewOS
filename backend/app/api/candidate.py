@@ -247,14 +247,22 @@ async def upload_part(request: Request):
     session = _UPLOAD_SESSIONS.get(upload_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Upload session not found")
+    try:
+        parsed_part_number = int(part_number)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid x-part-number header") from exc
+    if parsed_part_number <= 0:
+        raise HTTPException(status_code=400, detail="x-part-number must be a positive integer")
     body = await request.body()
+    if not body:
+        raise HTTPException(status_code=400, detail="Empty part payload")
     tmp_path = Path(str(session["tmp_path"]))
     with tmp_path.open("ab") as handle:
         handle.write(body)
     etag = hashlib.md5(body).hexdigest()  # noqa: S324
     cast_parts = session["parts"]
     if isinstance(cast_parts, list):
-        cast_parts.append({"ETag": etag, "PartNumber": int(part_number)})
+        cast_parts.append({"ETag": etag, "PartNumber": parsed_part_number})
     return {"ETag": etag}
 
 
@@ -265,6 +273,13 @@ def complete_multipart_upload(payload: dict, settings: Settings = Depends(get_se
     if session is None:
         raise HTTPException(status_code=404, detail="Upload session not found")
     tmp_path = Path(str(session["tmp_path"]))
+    parts = session.get("parts")
+    if not isinstance(parts, list) or len(parts) == 0:
+        raise HTTPException(status_code=400, detail="No uploaded parts found for this upload session")
+    if not tmp_path.exists():
+        raise HTTPException(status_code=404, detail="Upload payload not found")
+    if tmp_path.stat().st_size <= 0:
+        raise HTTPException(status_code=400, detail="Upload payload is empty")
     key = _safe_key(str(session["key"]))
     dest = Path(settings.local_recordings_dir) / key
     dest.parent.mkdir(parents=True, exist_ok=True)
