@@ -144,15 +144,28 @@ def create_invite(
 
     with _connect(settings) as connection:
         if supersede_existing:
-            connection.execute(
-                """
-                UPDATE invites
-                SET status = 'superseded', superseded_at = ?
-                WHERE lower(email) = lower(?)
-                  AND status IN ('invited', 'resent')
-                """,
-                (_iso(now), email),
-            )
+            if assessment_id is None:
+                connection.execute(
+                    """
+                    UPDATE invites
+                    SET status = 'superseded', superseded_at = ?
+                    WHERE lower(email) = lower(?)
+                      AND assessment_id IS NULL
+                      AND status IN ('invited', 'resent')
+                    """,
+                    (_iso(now), email),
+                )
+            else:
+                connection.execute(
+                    """
+                    UPDATE invites
+                    SET status = 'superseded', superseded_at = ?
+                    WHERE lower(email) = lower(?)
+                      AND assessment_id = ?
+                      AND status IN ('invited', 'resent')
+                    """,
+                    (_iso(now), email, assessment_id),
+                )
 
         cursor = connection.execute(
             """
@@ -187,6 +200,26 @@ def get_latest_invite_by_email(email: str, settings: Settings) -> InviteRecord |
             LIMIT 1
             """,
             (email,),
+        ).fetchone()
+        if row is None:
+            return None
+        invite = _row_to_record(row)
+        return _expire_if_needed(connection, invite)
+
+
+def get_latest_invite_by_email_and_assessment(
+    email: str, assessment_id: int, settings: Settings
+) -> InviteRecord | None:
+    with _connect(settings) as connection:
+        row = connection.execute(
+            """
+            SELECT * FROM invites
+            WHERE lower(email) = lower(?)
+              AND assessment_id = ?
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (email, assessment_id),
         ).fetchone()
         if row is None:
             return None

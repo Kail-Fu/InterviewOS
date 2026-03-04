@@ -13,6 +13,7 @@ from app.services.invite_store import (
     create_invite,
     get_invite_by_token,
     get_latest_invite_by_email,
+    get_latest_invite_by_email_and_assessment,
     mark_invite_taken,
 )
 
@@ -91,30 +92,51 @@ def resend_invite(
         if assessment_id is None:
             assessment_id = candidate.assessment_id
 
+    target_assessment_id = assessment_id
     source_invite = None
     if token:
         source_invite = get_invite_by_token(token, settings)
     elif email:
-        source_invite = get_latest_invite_by_email(email.strip().lower(), settings)
+        normalized_email = email.strip().lower()
+        if target_assessment_id is not None:
+            source_invite = get_latest_invite_by_email_and_assessment(
+                normalized_email,
+                target_assessment_id,
+                settings,
+            )
+        else:
+            source_invite = get_latest_invite_by_email(normalized_email, settings)
 
     if source_invite is None:
         raise HTTPException(status_code=404, detail="Invite not found.")
     if source_invite.status == "taken":
         raise HTTPException(status_code=409, detail="Invite already taken.")
 
+    if target_assessment_id is not None:
+        invite_assessment_id = source_invite.assessment_id
+        if invite_assessment_id is not None and invite_assessment_id != target_assessment_id:
+            raise HTTPException(
+                status_code=409,
+                detail="Invite does not belong to the provided assessment.",
+            )
+
+    resolved_assessment_id = (
+        target_assessment_id if target_assessment_id is not None else source_invite.assessment_id
+    )
+
     resent = create_invite(
         source_invite.email,
         settings,
-        assessment_id=assessment_id if assessment_id is not None else source_invite.assessment_id,
+        assessment_id=resolved_assessment_id,
         status="resent",
         resent_from_token=source_invite.token,
         supersede_existing=True,
     )
     send_assessment_email(source_invite.email, _invite_url(resent.token, settings), settings, is_resend=True)
-    if assessment_id is not None:
+    if resolved_assessment_id is not None:
         add_or_update_candidate(
             settings,
-            assessment_id=assessment_id,
+            assessment_id=resolved_assessment_id,
             email=source_invite.email,
             name=None,
             status="resent",
