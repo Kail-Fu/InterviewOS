@@ -115,18 +115,52 @@ def _expire_if_needed(connection: sqlite3.Connection, invite: InviteRecord) -> I
     return _row_to_record(row)
 
 
-def supersede_active_invites(email: str, settings: Settings) -> int:
-    with _connect(settings) as connection:
+def _supersede_active_invites_in_connection(
+    connection: sqlite3.Connection,
+    *,
+    email: str,
+    assessment_id: int | None,
+    superseded_at: str,
+) -> int:
+    if assessment_id is None:
         result = connection.execute(
             """
             UPDATE invites
             SET status = 'superseded', superseded_at = ?
             WHERE lower(email) = lower(?)
+              AND assessment_id IS NULL
               AND status IN ('invited', 'resent')
             """,
-            (_iso(_utc_now()), email),
+            (superseded_at, email),
         )
         return int(result.rowcount)
+
+    result = connection.execute(
+        """
+        UPDATE invites
+        SET status = 'superseded', superseded_at = ?
+        WHERE lower(email) = lower(?)
+          AND assessment_id = ?
+          AND status IN ('invited', 'resent')
+        """,
+        (superseded_at, email, assessment_id),
+    )
+    return int(result.rowcount)
+
+
+def supersede_active_invites(
+    email: str,
+    settings: Settings,
+    *,
+    assessment_id: int | None = None,
+) -> int:
+    with _connect(settings) as connection:
+        return _supersede_active_invites_in_connection(
+            connection,
+            email=email,
+            assessment_id=assessment_id,
+            superseded_at=_iso(_utc_now()),
+        )
 
 
 def create_invite(
@@ -144,28 +178,12 @@ def create_invite(
 
     with _connect(settings) as connection:
         if supersede_existing:
-            if assessment_id is None:
-                connection.execute(
-                    """
-                    UPDATE invites
-                    SET status = 'superseded', superseded_at = ?
-                    WHERE lower(email) = lower(?)
-                      AND assessment_id IS NULL
-                      AND status IN ('invited', 'resent')
-                    """,
-                    (_iso(now), email),
-                )
-            else:
-                connection.execute(
-                    """
-                    UPDATE invites
-                    SET status = 'superseded', superseded_at = ?
-                    WHERE lower(email) = lower(?)
-                      AND assessment_id = ?
-                      AND status IN ('invited', 'resent')
-                    """,
-                    (_iso(now), email, assessment_id),
-                )
+            _supersede_active_invites_in_connection(
+                connection,
+                email=email,
+                assessment_id=assessment_id,
+                superseded_at=_iso(now),
+            )
 
         cursor = connection.execute(
             """
