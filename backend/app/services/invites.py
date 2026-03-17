@@ -6,7 +6,7 @@ from app.services.assessment import (
     send_assessment_email,
 )
 from app.services.assessment_store import add_or_update_candidate, get_candidate_by_id
-from app.services.assessment_store import get_candidate_by_assessment_and_email
+from app.services.assessment_store import get_assessment, get_candidate_by_assessment_and_email
 from app.services.invite_store import (
     ACTIVE_STATUSES,
     InviteRecord,
@@ -149,7 +149,11 @@ def verify_invite(token: str, settings: Settings) -> dict[str, object]:
     if invite is None:
         raise HTTPException(status_code=404, detail="Invalid token.")
 
-    is_active = invite.status in ACTIVE_STATUSES
+    assessment_missing = False
+    if invite.assessment_id is not None:
+        assessment_missing = get_assessment(settings, invite.assessment_id) is None
+
+    is_active = invite.status in ACTIVE_STATUSES and not assessment_missing
     payload: dict[str, object] = {
         "valid": is_active,
         "invite": _to_public_invite(invite, settings),
@@ -158,6 +162,9 @@ def verify_invite(token: str, settings: Settings) -> dict[str, object]:
         payload["expired"] = True
     if invite.status == "taken":
         payload["taken"] = True
+    if assessment_missing:
+        payload["assessmentMissing"] = True
+        payload["reason"] = "Assessment not found."
     if is_active:
         payload["assessmentDownloadUrl"] = generate_assessment_download_link(settings)
     return payload
