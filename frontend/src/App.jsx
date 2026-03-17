@@ -1153,6 +1153,7 @@ function TakeAssessmentGateway() {
       setState('resent')
       setMessage('A new link has been sent to your email.')
     } catch (error) {
+      setState('expired')
       setMessage(error?.message || 'Failed to resend. Please contact your recruiter.')
     }
   }
