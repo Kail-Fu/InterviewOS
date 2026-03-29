@@ -54,6 +54,8 @@ def create_and_send_invite(
     candidate_name: str | None = None,
 ) -> dict[str, str | int | None]:
     normalized_email = email.strip().lower()
+    if assessment_id is not None and get_assessment(settings, assessment_id) is None:
+        raise HTTPException(status_code=404, detail="Assessment not found.")
     invite = create_invite(
         normalized_email,
         settings,
@@ -123,6 +125,8 @@ def resend_invite(
     resolved_assessment_id = (
         target_assessment_id if target_assessment_id is not None else source_invite.assessment_id
     )
+    if resolved_assessment_id is not None and get_assessment(settings, resolved_assessment_id) is None:
+        raise HTTPException(status_code=404, detail="Assessment not found.")
 
     resent = create_invite(
         source_invite.email,
