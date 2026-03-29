@@ -360,16 +360,15 @@ async def upload_zip(
     candidate = None
     try:
         assessment_numeric = int(assessmentId)
-        if email:
+        assessment = get_assessment(settings, assessment_numeric)
+        if email and assessment is not None:
             candidate = mark_candidate_submitted(
                 settings,
                 assessment_id=assessment_numeric,
                 email=email,
                 name=name or None,
             )
-            assessment = get_assessment(settings, assessment_numeric)
-            assessment_type = assessment.assessment_type if assessment is not None else "default"
-            _init_pending_report(settings, candidate.id, assessment_numeric, assessment_type)
+            _init_pending_report(settings, candidate.id, assessment_numeric, assessment.assessment_type)
     except ValueError:
         pass
     if candidate is not None:
@@ -415,16 +414,15 @@ async def upload_assessment4(
     candidate = None
     try:
         assessment_numeric = int(assessmentId)
-        if email:
+        assessment = get_assessment(settings, assessment_numeric)
+        if email and assessment is not None:
             candidate = mark_candidate_submitted(
                 settings,
                 assessment_id=assessment_numeric,
                 email=email,
                 name=name or None,
             )
-            assessment = get_assessment(settings, assessment_numeric)
-            assessment_type = assessment.assessment_type if assessment is not None else "assessment4-ner"
-            _init_pending_report(settings, candidate.id, assessment_numeric, assessment_type)
+            _init_pending_report(settings, candidate.id, assessment_numeric, assessment.assessment_type)
     except ValueError:
         pass
 
