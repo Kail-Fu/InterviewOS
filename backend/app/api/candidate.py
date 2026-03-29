@@ -29,7 +29,7 @@ _UPLOAD_SESSIONS: dict[str, dict[str, object]] = {}
 
 
 def _safe_key(name: str) -> str:
-    return name.replace("..", "").lstrip("/").replace("\\", "/")
+    return name.replace("..", "").replace("\\", "/").lstrip("/")
 
 
 def _iso_utc(ts: float) -> str:
