@@ -12,11 +12,13 @@ from app.services.assessment import generate_assessment_download_link
 from app.services.assessment_store import (
     ReportRecord,
     get_assessment,
+    get_candidate_recording_key,
     get_latest_candidate_by_assessment,
     get_latest_report_by_assessment,
     get_candidate_by_id,
     get_report_by_candidate,
     mark_candidate_submitted,
+    store_recording_key,
     upsert_report,
 )
 from app.services.report_engine import run_scoring_and_store_report
@@ -220,8 +222,22 @@ async def local_upload_put(key: str, request: Request, settings: Settings = Depe
 
 @router.post("/notify-recording-upload")
 def notify_recording_upload(payload: dict, settings: Settings = Depends(get_settings)):
-    # Keep endpoint for compatibility; upload is already persisted by /local-upload.
-    return {"ok": True, "s3Key": payload.get("s3Key")}
+    s3_key = payload.get("s3Key")
+    email = payload.get("email")
+    assessment_id = payload.get("assessmentId")
+    recording_type = payload.get("type")
+    if s3_key and email and assessment_id is not None and recording_type:
+        try:
+            store_recording_key(
+                settings,
+                email=str(email),
+                assessment_id=int(assessment_id),
+                s3_key=str(s3_key),
+                recording_type=str(recording_type),
+            )
+        except (ValueError, TypeError):
+            pass
+    return {"ok": True, "s3Key": s3_key}
 
 
 @router.post("/api/recording/start-multipart-upload")

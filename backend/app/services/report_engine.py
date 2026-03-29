@@ -4,7 +4,7 @@ from pathlib import Path
 import zipfile
 
 from app.core.config import Settings
-from app.services.assessment_store import CandidateRecord, get_assessment, upsert_report
+from app.services.assessment_store import CandidateRecord, get_assessment, get_candidate_recording_key, upsert_report
 from app.services.screen_time_analyzer import analyze_screen_time
 
 
@@ -45,7 +45,23 @@ def _find_latest_assessment_recording(settings: Settings, assessment_id: int) ->
     return max(matches, key=lambda p: p.stat().st_mtime)
 
 
-def _find_latest_reflection_recording(settings: Settings, assessment_id: int) -> Path | None:
+def _find_reflection_by_key(settings: Settings, s3_key: str) -> Path | None:
+    path = Path(settings.local_recordings_dir) / s3_key
+    return path if path.is_file() else None
+
+
+def _find_latest_reflection_recording(settings: Settings, assessment_id: int, *, candidate_email: str | None = None) -> Path | None:
+    if candidate_email is not None:
+        key = get_candidate_recording_key(
+            settings,
+            assessment_id=assessment_id,
+            email=candidate_email,
+            recording_type='reflection',
+        )
+        if key is not None:
+            found = _find_reflection_by_key(settings, key)
+            if found is not None:
+                return found
     root = Path(settings.local_recordings_dir) / 'reflection' / str(assessment_id)
     if not root.exists():
         return None
@@ -273,7 +289,7 @@ def run_scoring_and_store_report(settings: Settings, candidate: CandidateRecord)
     submission = _find_latest_submission(settings, candidate.assessment_id)
     notebook = _find_latest_notebook(settings, candidate.assessment_id)
     recording = _find_latest_assessment_recording(settings, candidate.assessment_id)
-    reflection = _find_latest_reflection_recording(settings, candidate.assessment_id)
+    reflection = _find_latest_reflection_recording(settings, candidate.assessment_id, candidate_email=candidate.email)
 
     try:
         base_score, code_quality, checks, summary, diffs = _evaluate_submission(

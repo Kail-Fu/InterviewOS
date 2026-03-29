@@ -154,6 +154,19 @@ def init_assessment_store(settings: Settings) -> None:
             """
         )
 
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS recording_keys (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL,
+                assessment_id INTEGER NOT NULL,
+                s3_key TEXT NOT NULL,
+                recording_type TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+
         _ensure_column(connection, "assessments", "question_id", "INTEGER")
         _ensure_column(connection, "assessments", "job_link", "TEXT")
         _ensure_column(connection, "assessments", "job_desc", "TEXT")
@@ -718,3 +731,43 @@ def get_latest_report_by_assessment(settings: Settings, assessment_id: int) -> R
         if row is None:
             return None
         return _row_to_report_record(row)
+
+
+def store_recording_key(
+    settings: Settings,
+    *,
+    email: str,
+    assessment_id: int,
+    s3_key: str,
+    recording_type: str,
+) -> None:
+    with _connect(settings) as connection:
+        connection.execute(
+            """
+            INSERT INTO recording_keys (email, assessment_id, s3_key, recording_type, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (email.strip().lower(), assessment_id, s3_key, recording_type, _iso_now()),
+        )
+
+
+def get_candidate_recording_key(
+    settings: Settings,
+    *,
+    assessment_id: int,
+    email: str,
+    recording_type: str,
+) -> str | None:
+    with _connect(settings) as connection:
+        row = connection.execute(
+            """
+            SELECT s3_key FROM recording_keys
+            WHERE assessment_id = ? AND lower(email) = lower(?) AND recording_type = ?
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (assessment_id, email.strip().lower(), recording_type),
+        ).fetchone()
+        if row is None:
+            return None
+        return str(row["s3_key"])
