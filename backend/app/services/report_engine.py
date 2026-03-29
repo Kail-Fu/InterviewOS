@@ -4,8 +4,17 @@ from pathlib import Path
 import zipfile
 
 from app.core.config import Settings
-from app.services.assessment_store import CandidateRecord, get_assessment, upsert_report
+from app.services.assessment_store import (
+    CandidateRecord,
+    get_assessment,
+    get_latest_reflection_key_for_candidate,
+    upsert_report,
+)
 from app.services.screen_time_analyzer import analyze_screen_time
+
+
+def _safe_key(name: str) -> str:
+    return name.replace('..', '').lstrip('/').replace('\\', '/')
 
 
 def _safe_relative(path: Path, base: Path) -> str | None:
@@ -45,14 +54,31 @@ def _find_latest_assessment_recording(settings: Settings, assessment_id: int) ->
     return max(matches, key=lambda p: p.stat().st_mtime)
 
 
-def _find_latest_reflection_recording(settings: Settings, assessment_id: int) -> Path | None:
+def _find_latest_reflection_recording(
+    settings: Settings,
+    assessment_id: int,
+    candidate_email: str,
+) -> Path | None:
+    reflection_key = get_latest_reflection_key_for_candidate(
+        settings,
+        assessment_id=assessment_id,
+        email=candidate_email,
+    )
+    if reflection_key:
+        candidate_reflection = Path(settings.local_recordings_dir) / _safe_key(reflection_key)
+        if candidate_reflection.is_file():
+            return candidate_reflection
+
     root = Path(settings.local_recordings_dir) / 'reflection' / str(assessment_id)
     if not root.exists():
         return None
+
+    # Legacy fallback (before reflection uploads were candidate-attributed):
+    # only use a reflection recording when there is a single possible file.
     matches = [p for p in root.rglob('*.webm') if p.is_file()]
-    if not matches:
+    if len(matches) != 1:
         return None
-    return max(matches, key=lambda p: p.stat().st_mtime)
+    return matches[0]
 
 
 def _detect_assessment_type(assessment_type: str | None) -> str:
@@ -273,7 +299,7 @@ def run_scoring_and_store_report(settings: Settings, candidate: CandidateRecord)
     submission = _find_latest_submission(settings, candidate.assessment_id)
     notebook = _find_latest_notebook(settings, candidate.assessment_id)
     recording = _find_latest_assessment_recording(settings, candidate.assessment_id)
-    reflection = _find_latest_reflection_recording(settings, candidate.assessment_id)
+    reflection = _find_latest_reflection_recording(settings, candidate.assessment_id, candidate.email)
 
     try:
         base_score, code_quality, checks, summary, diffs = _evaluate_submission(

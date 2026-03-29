@@ -153,6 +153,25 @@ def init_assessment_store(settings: Settings) -> None:
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS reflection_uploads (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                assessment_id INTEGER NOT NULL,
+                email TEXT NOT NULL,
+                section_id TEXT,
+                s3_key TEXT NOT NULL,
+                uploaded_at TEXT NOT NULL,
+                FOREIGN KEY (assessment_id) REFERENCES assessments(id)
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_reflection_uploads_lookup
+            ON reflection_uploads(assessment_id, email, uploaded_at DESC)
+            """
+        )
 
         _ensure_column(connection, "assessments", "question_id", "INTEGER")
         _ensure_column(connection, "assessments", "job_link", "TEXT")
@@ -490,6 +509,54 @@ def mark_candidate_submitted(
         name=name,
         status="submitted",
     )
+
+
+def record_reflection_upload(
+    settings: Settings,
+    *,
+    assessment_id: int,
+    email: str,
+    section_id: str | None,
+    s3_key: str,
+) -> None:
+    normalized_email = email.strip().lower()
+    with _connect(settings) as connection:
+        connection.execute(
+            """
+            INSERT INTO reflection_uploads (assessment_id, email, section_id, s3_key, uploaded_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                assessment_id,
+                normalized_email,
+                (section_id or "").strip() or None,
+                s3_key.strip(),
+                _iso_now(),
+            ),
+        )
+
+
+def get_latest_reflection_key_for_candidate(
+    settings: Settings,
+    *,
+    assessment_id: int,
+    email: str,
+) -> str | None:
+    normalized_email = email.strip().lower()
+    with _connect(settings) as connection:
+        row = connection.execute(
+            """
+            SELECT s3_key
+            FROM reflection_uploads
+            WHERE assessment_id = ? AND lower(email) = lower(?)
+            ORDER BY uploaded_at DESC
+            LIMIT 1
+            """,
+            (assessment_id, normalized_email),
+        ).fetchone()
+        if row is None:
+            return None
+        return str(row["s3_key"])
 
 
 def list_questions(settings: Settings) -> list[QuestionRecord]:

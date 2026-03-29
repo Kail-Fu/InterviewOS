@@ -13,10 +13,12 @@ from app.services.assessment_store import (
     ReportRecord,
     get_assessment,
     get_latest_candidate_by_assessment,
+    get_latest_reflection_key_for_candidate,
     get_latest_report_by_assessment,
     get_candidate_by_id,
     get_report_by_candidate,
     mark_candidate_submitted,
+    record_reflection_upload,
     upsert_report,
 )
 from app.services.report_engine import run_scoring_and_store_report
@@ -62,14 +64,27 @@ def _find_latest_recording(settings: Settings, assessment_id: int) -> Path | Non
     return max(candidates, key=lambda path: path.stat().st_mtime)
 
 
-def _find_latest_reflection(settings: Settings, assessment_id: int) -> Path | None:
+def _find_latest_reflection(settings: Settings, assessment_id: int, email: str) -> Path | None:
+    reflection_key = get_latest_reflection_key_for_candidate(
+        settings,
+        assessment_id=assessment_id,
+        email=email,
+    )
+    if reflection_key:
+        candidate_reflection = Path(settings.local_recordings_dir) / _safe_key(reflection_key)
+        if candidate_reflection.is_file():
+            return candidate_reflection
+
     root = Path(settings.local_recordings_dir) / "reflection" / str(assessment_id)
     if not root.exists():
         return None
+
+    # Legacy fallback (before reflection uploads were candidate-attributed):
+    # only return a recording when the folder is unambiguous.
     candidates = [path for path in root.rglob("*.webm") if path.is_file()]
-    if not candidates:
+    if len(candidates) != 1:
         return None
-    return max(candidates, key=lambda path: path.stat().st_mtime)
+    return candidates[0]
 
 
 def _report_payload_from_record(
@@ -220,7 +235,29 @@ async def local_upload_put(key: str, request: Request, settings: Settings = Depe
 
 @router.post("/notify-recording-upload")
 def notify_recording_upload(payload: dict, settings: Settings = Depends(get_settings)):
-    # Keep endpoint for compatibility; upload is already persisted by /local-upload.
+    upload_type = str(payload.get("type", "")).strip().lower()
+    if upload_type == "reflection":
+        s3_key = str(payload.get("s3Key", "")).strip()
+        email = str(payload.get("email", "")).strip().lower()
+        raw_assessment_id = payload.get("assessmentId")
+        section_id = payload.get("sectionId")
+        if not s3_key or not email:
+            raise HTTPException(status_code=400, detail="Missing reflection upload metadata")
+        try:
+            assessment_id = int(str(raw_assessment_id))
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="Invalid assessmentId for reflection upload") from exc
+        if get_assessment(settings, assessment_id) is None:
+            raise HTTPException(status_code=404, detail="Assessment not found")
+        record_reflection_upload(
+            settings,
+            assessment_id=assessment_id,
+            email=email,
+            section_id=str(section_id) if section_id is not None else None,
+            s3_key=_safe_key(s3_key),
+        )
+
+    # Keep endpoint response stable for frontend callers.
     return {"ok": True, "s3Key": payload.get("s3Key")}
 
 
@@ -430,7 +467,7 @@ def report(candidate_id: int, settings: Settings = Depends(get_settings)):
 
     submission = _find_latest_submission(settings, candidate.assessment_id)
     assessment_recording = _find_latest_recording(settings, candidate.assessment_id)
-    reflection_recording = _find_latest_reflection(settings, candidate.assessment_id)
+    reflection_recording = _find_latest_reflection(settings, candidate.assessment_id, candidate.email)
 
     has_submission = submission is not None
     has_assessment_recording = assessment_recording is not None
