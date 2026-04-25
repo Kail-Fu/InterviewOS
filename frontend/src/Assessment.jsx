@@ -586,6 +586,7 @@ function Assessment( {company, assessmentId: propAssessmentId, assessmentTitle, 
           fileType: file.type,
           sectionId: sectionId,
           assessmentId: userInfo.assessmentId,
+          inviteToken: inviteToken,
         }
       );
       presigned = res.data;

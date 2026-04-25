@@ -1,5 +1,6 @@
 import hashlib
 import os
+import secrets
 import time
 import uuid
 from datetime import UTC, datetime
@@ -22,12 +23,16 @@ from app.services.assessment_store import (
     record_reflection_upload,
     upsert_report,
 )
+from app.services.invite_store import get_invite_by_token
 from app.services.report_engine import run_scoring_and_store_report
 
 router = APIRouter(tags=["candidate"])
 
 _UPLOAD_SESSIONS: dict[str, dict[str, object]] = {}
 _UPLOAD_SESSION_TTL_SECONDS = 60 * 60
+_LOCAL_UPLOAD_TOKENS: dict[str, dict[str, object]] = {}
+_LOCAL_UPLOAD_TOKEN_TTL_SECONDS = 15 * 60
+_LOCAL_UPLOAD_MAX_BYTES = 250 * 1024 * 1024
 
 
 def _drop_upload_session(upload_id: str) -> None:
@@ -55,6 +60,51 @@ def _prune_expired_upload_sessions() -> None:
 
 def _safe_key(name: str) -> str:
     return name.replace("..", "").replace("\\", "/").lstrip("/")
+
+
+def _recordings_destination(settings: Settings, key: str) -> Path:
+    safe_key = _safe_key(key)
+    if not safe_key:
+        raise HTTPException(status_code=400, detail="Missing upload key")
+    root = Path(settings.local_recordings_dir).resolve()
+    dest = (root / safe_key).resolve()
+    try:
+        dest.relative_to(root)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid upload key") from exc
+    return dest
+
+
+def _prune_local_upload_tokens() -> None:
+    now = time.monotonic()
+    expired = [
+        token
+        for token, session in _LOCAL_UPLOAD_TOKENS.items()
+        if now > float(session.get("expires_at", 0))
+    ]
+    for token in expired:
+        _LOCAL_UPLOAD_TOKENS.pop(token, None)
+
+
+def _issue_local_upload_token(key: str) -> str:
+    _prune_local_upload_tokens()
+    token = secrets.token_urlsafe(32)
+    _LOCAL_UPLOAD_TOKENS[token] = {
+        "key": _safe_key(key),
+        "expires_at": time.monotonic() + _LOCAL_UPLOAD_TOKEN_TTL_SECONDS,
+    }
+    return token
+
+
+def _consume_local_upload_token(token: str | None, key: str) -> None:
+    _prune_local_upload_tokens()
+    if not token:
+        raise HTTPException(status_code=403, detail="Missing upload token")
+    session = _LOCAL_UPLOAD_TOKENS.pop(token, None)
+    if session is None:
+        raise HTTPException(status_code=403, detail="Invalid or expired upload token")
+    if session.get("key") != _safe_key(key):
+        raise HTTPException(status_code=403, detail="Upload token does not match key")
 
 
 def _iso_utc(ts: float) -> str:
@@ -241,19 +291,42 @@ def get_presigned_upload_url(
     settings: Settings = Depends(get_settings),
 ):
     file_name = _safe_key(str(payload.get("fileName", "upload.bin")))
-    assessment_id = str(payload.get("assessmentId", "unknown"))
-    section_id = str(payload.get("sectionId", "section"))
+    raw_assessment_id = str(payload.get("assessmentId", "")).strip()
+    invite_token = str(payload.get("inviteToken", "")).strip()
+    try:
+        assessment_id = int(raw_assessment_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid assessmentId") from exc
+    if get_assessment(settings, assessment_id) is None:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    invite = get_invite_by_token(invite_token, settings)
+    if invite is None or invite.assessment_id != assessment_id or invite.status not in {"invited", "resent", "taken"}:
+        raise HTTPException(status_code=403, detail="Invalid invite token")
+
+    section_id = _safe_key(str(payload.get("sectionId", "section")))
     key = _safe_key(f"reflection/{assessment_id}/{section_id}-{uuid.uuid4().hex}-{file_name}")
+    _recordings_destination(settings, key)
+    upload_token = _issue_local_upload_token(key)
     base = settings.app_base_url
-    return {"url": f"{base}/local-upload/{key}", "s3Key": key}
+    return {"url": f"{base}/local-upload/{key}?token={upload_token}", "s3Key": key}
 
 
 @router.put("/local-upload/{key:path}")
 async def local_upload_put(key: str, request: Request, settings: Settings = Depends(get_settings)):
     safe_key = _safe_key(key)
-    dest = Path(settings.local_recordings_dir) / safe_key
+    _consume_local_upload_token(request.query_params.get("token"), safe_key)
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            if int(content_length) > _LOCAL_UPLOAD_MAX_BYTES:
+                raise HTTPException(status_code=413, detail="Upload too large")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Invalid content-length") from exc
+    dest = _recordings_destination(settings, safe_key)
     dest.parent.mkdir(parents=True, exist_ok=True)
     body = await request.body()
+    if len(body) > _LOCAL_UPLOAD_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Upload too large")
     dest.write_bytes(body)
     return JSONResponse({"ok": True})
 
