@@ -196,16 +196,6 @@ See [SECURITY.md](SECURITY.md). Please report sensitive issues responsibly.
 
 ---
 
-## Hosted version
-
-InterviewOS is the open infrastructure.
-
-If you prefer a fully managed platform with ready-to-use simulations, automated scoring, and enterprise features:
-
-[https://foretokenai.com](https://foretokenai.com)
-
----
-
 ## License
 
 MIT. See [LICENSE](LICENSE).
