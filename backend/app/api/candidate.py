@@ -1,5 +1,6 @@
 import hashlib
 import os
+import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -26,6 +27,30 @@ from app.services.report_engine import run_scoring_and_store_report
 router = APIRouter(tags=["candidate"])
 
 _UPLOAD_SESSIONS: dict[str, dict[str, object]] = {}
+_UPLOAD_SESSION_TTL_SECONDS = 60 * 60
+
+
+def _drop_upload_session(upload_id: str) -> None:
+    session = _UPLOAD_SESSIONS.pop(upload_id, None)
+    if session is None:
+        return
+    tmp_path = Path(str(session.get("tmp_path", "")))
+    if tmp_path.is_file():
+        try:
+            tmp_path.unlink()
+        except OSError:
+            pass
+
+
+def _prune_expired_upload_sessions() -> None:
+    now = time.monotonic()
+    expired = [
+        upload_id
+        for upload_id, session in _UPLOAD_SESSIONS.items()
+        if now - float(session.get("created_at", now)) > _UPLOAD_SESSION_TTL_SECONDS
+    ]
+    for upload_id in expired:
+        _drop_upload_session(upload_id)
 
 
 def _safe_key(name: str) -> str:
@@ -263,6 +288,7 @@ def notify_recording_upload(payload: dict, settings: Settings = Depends(get_sett
 
 @router.post("/api/recording/start-multipart-upload")
 def start_multipart_upload(payload: dict, settings: Settings = Depends(get_settings)):
+    _prune_expired_upload_sessions()
     name = str(payload.get("name", "candidate"))
     assessment_id = str(payload.get("assessmentId", "unknown"))
     upload_id = uuid.uuid4().hex
@@ -270,7 +296,12 @@ def start_multipart_upload(payload: dict, settings: Settings = Depends(get_setti
     tmp_path = Path(settings.local_recordings_dir) / "tmp" / f"{upload_id}.part"
     tmp_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path.write_bytes(b"")
-    _UPLOAD_SESSIONS[upload_id] = {"key": key, "tmp_path": str(tmp_path), "parts": []}
+    _UPLOAD_SESSIONS[upload_id] = {
+        "key": key,
+        "tmp_path": str(tmp_path),
+        "parts": [],
+        "created_at": time.monotonic(),
+    }
     return {"uploadId": upload_id, "key": key}
 
 
@@ -284,6 +315,9 @@ async def upload_part(request: Request):
     session = _UPLOAD_SESSIONS.get(upload_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Upload session not found")
+    if time.monotonic() - float(session.get("created_at", time.monotonic())) > _UPLOAD_SESSION_TTL_SECONDS:
+        _drop_upload_session(upload_id)
+        raise HTTPException(status_code=410, detail="Upload session expired")
     try:
         parsed_part_number = int(part_number)
     except (TypeError, ValueError) as exc:
@@ -309,6 +343,9 @@ def complete_multipart_upload(payload: dict, settings: Settings = Depends(get_se
     session = _UPLOAD_SESSIONS.get(upload_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Upload session not found")
+    if time.monotonic() - float(session.get("created_at", time.monotonic())) > _UPLOAD_SESSION_TTL_SECONDS:
+        _drop_upload_session(upload_id)
+        raise HTTPException(status_code=410, detail="Upload session expired")
     tmp_path = Path(str(session["tmp_path"]))
     parts = session.get("parts")
     if not isinstance(parts, list) or len(parts) == 0:
