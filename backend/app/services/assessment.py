@@ -101,18 +101,17 @@ def send_reminder_email(to_email: str, settings: Settings) -> None:
         _send_via_smtp(to_email, content.subject, content.html_body, content.text_body, settings)
         return
 
+    msg = MIMEMultipart()
+    msg["Subject"] = content.subject
+    msg["From"] = _sender_email(settings)
+    msg["To"] = to_email
+    msg.attach(MIMEText(content.html_body, "html"))
+
     ses = ses_client(settings)
-    ses.send_email(
+    ses.send_raw_email(
         Source=_sender_email(settings),
-        Destination={"ToAddresses": [to_email]},
-        Message={
-            "Subject": {"Data": content.subject},
-            "Body": {
-                "Text": {
-                    "Data": content.text_body
-                }
-            },
-        },
+        Destinations=[to_email],
+        RawMessage={"Data": msg.as_string()},
     )
 
 
