@@ -14,7 +14,7 @@ from app.services.screen_time_analyzer import analyze_screen_time
 
 
 def _safe_key(name: str) -> str:
-    return name.replace('..', '').lstrip('/').replace('\\', '/')
+    return name.replace('..', '').replace('\\', '/').lstrip('/')
 
 
 def _safe_relative(path: Path, base: Path) -> str | None:
