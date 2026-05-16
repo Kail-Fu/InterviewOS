@@ -8,6 +8,7 @@ from app.services.assessment_store import (
     CandidateRecord,
     get_assessment,
     get_latest_reflection_key_for_candidate,
+    get_report_by_candidate,
     upsert_report,
 )
 from app.services.screen_time_analyzer import analyze_screen_time
@@ -24,24 +25,59 @@ def _safe_relative(path: Path, base: Path) -> str | None:
         return None
 
 
-def _find_latest_submission(settings: Settings, assessment_id: int) -> Path | None:
+def _submission_path(settings: Settings, assessment_id: int, submission_file: str | None) -> Path | None:
+    if not submission_file:
+        return None
+    root = Path(settings.local_submissions_dir)
+    candidate_path = root / _safe_key(submission_file)
+    if (
+        candidate_path.is_file()
+        and candidate_path.name.startswith(f'{assessment_id}-')
+        and candidate_path.suffix.lower() == '.zip'
+    ):
+        return candidate_path
+    return None
+
+
+def _find_candidate_submission(
+    settings: Settings,
+    assessment_id: int,
+    submission_file: str | None,
+) -> Path | None:
+    submission = _submission_path(settings, assessment_id, submission_file)
+    if submission is not None:
+        return submission
+
     root = Path(settings.local_submissions_dir)
     if not root.exists():
         return None
     matches = [p for p in root.glob(f'{assessment_id}-*.zip') if p.is_file()]
-    if not matches:
+    if len(matches) != 1:
         return None
-    return max(matches, key=lambda p: p.stat().st_mtime)
+    return matches[0]
 
 
-def _find_latest_notebook(settings: Settings, assessment_id: int) -> Path | None:
+def _find_candidate_notebook(
+    settings: Settings,
+    assessment_id: int,
+    submission_file: str | None,
+) -> Path | None:
     root = Path(settings.local_submissions_dir)
     if not root.exists():
         return None
+
+    if submission_file:
+        submission_name = _safe_key(submission_file)
+        parts = submission_name.split('-', 2)
+        if len(parts) == 3 and parts[0] == str(assessment_id):
+            matches = [p for p in root.glob(f'{parts[0]}-{parts[1]}-*.ipynb') if p.is_file()]
+            if len(matches) == 1:
+                return matches[0]
+
     matches = [p for p in root.glob(f'{assessment_id}-*.ipynb') if p.is_file()]
-    if not matches:
+    if len(matches) != 1:
         return None
-    return max(matches, key=lambda p: p.stat().st_mtime)
+    return matches[0]
 
 
 def _find_latest_assessment_recording(settings: Settings, assessment_id: int) -> Path | None:
@@ -296,8 +332,18 @@ def run_scoring_and_store_report(settings: Settings, candidate: CandidateRecord)
         return
 
     assessment_type = _detect_assessment_type(getattr(assessment, 'assessment_type', 'default'))
-    submission = _find_latest_submission(settings, candidate.assessment_id)
-    notebook = _find_latest_notebook(settings, candidate.assessment_id)
+    pending_report = get_report_by_candidate(settings, candidate.id)
+    recorded_submission_file = pending_report.submission_file if pending_report else None
+    submission = _find_candidate_submission(
+        settings,
+        candidate.assessment_id,
+        recorded_submission_file,
+    )
+    notebook = _find_candidate_notebook(
+        settings,
+        candidate.assessment_id,
+        recorded_submission_file,
+    )
     recording = _find_latest_assessment_recording(settings, candidate.assessment_id)
     reflection = _find_latest_reflection_recording(settings, candidate.assessment_id, candidate.email)
 

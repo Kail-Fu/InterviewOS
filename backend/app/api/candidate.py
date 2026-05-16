@@ -193,7 +193,14 @@ def _report_payload_from_record(
     }
 
 
-def _init_pending_report(settings: Settings, candidate_id: int, assessment_id: int, assessment_type: str) -> None:
+def _init_pending_report(
+    settings: Settings,
+    candidate_id: int,
+    assessment_id: int,
+    assessment_type: str,
+    *,
+    submission_file: str | None = None,
+) -> None:
     upsert_report(
         settings,
         candidate_id=candidate_id,
@@ -208,7 +215,7 @@ def _init_pending_report(settings: Settings, candidate_id: int, assessment_id: i
         assessment_type=assessment_type,
         app_usage=[],
         total_duration=None,
-        submission_file=None,
+        submission_file=submission_file,
         assessment_recording_key=None,
         reflection_recording_key=None,
     )
@@ -478,7 +485,13 @@ async def upload_zip(
                 email=email,
                 name=name or None,
             )
-            _init_pending_report(settings, candidate.id, assessment_numeric, assessment.assessment_type)
+            _init_pending_report(
+                settings,
+                candidate.id,
+                assessment_numeric,
+                assessment.assessment_type,
+                submission_file=dest_name,
+            )
     except ValueError:
         pass
     if candidate is not None:
@@ -532,7 +545,13 @@ async def upload_assessment4(
                 email=email,
                 name=name or None,
             )
-            _init_pending_report(settings, candidate.id, assessment_numeric, assessment.assessment_type)
+            _init_pending_report(
+                settings,
+                candidate.id,
+                assessment_numeric,
+                assessment.assessment_type,
+                submission_file=zip_dest_name,
+            )
     except ValueError:
         pass
 
