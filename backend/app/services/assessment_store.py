@@ -331,6 +331,34 @@ def get_assessment(settings: Settings, assessment_id: int) -> AssessmentRecord |
         return _assessment_row_to_record(row)
 
 
+def get_default_assessment(settings: Settings) -> AssessmentRecord | None:
+    with _connect(settings) as connection:
+        row = connection.execute(
+            """
+            SELECT
+                a.id,
+                a.title,
+                a.role,
+                a.status,
+                a.created_at,
+                a.question_id,
+                a.job_link,
+                a.job_desc,
+                a.assessment_type,
+                COALESCE(COUNT(c.id), 0) AS candidate_count
+            FROM assessments a
+            LEFT JOIN candidates c ON c.assessment_id = a.id
+            WHERE a.status = 'active'
+            GROUP BY a.id
+            ORDER BY a.id ASC
+            LIMIT 1
+            """
+        ).fetchone()
+        if row is None:
+            return None
+        return _assessment_row_to_record(row)
+
+
 def list_candidates(settings: Settings, assessment_id: int | None = None) -> list[CandidateRecord]:
     with _connect(settings) as connection:
         if assessment_id is None:

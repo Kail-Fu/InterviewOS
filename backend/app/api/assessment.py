@@ -6,7 +6,7 @@ from app.services.assessment import (
     generate_assessment_download_link,
     schedule_reminder_email,
 )
-from app.services.assessment_store import get_assessment
+from app.services.assessment_store import get_assessment, get_default_assessment
 from app.services.invites import create_and_send_invite
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
@@ -28,15 +28,23 @@ async def start_assessment(
     settings: Settings = Depends(get_settings),
 ):
     if payload.name:
-        assessment_id = payload.assessmentId if payload.assessmentId is not None else "default"
+        assessment_id = payload.assessmentId
         assessment_type = "default"
-        try:
-            numeric_assessment_id = int(str(assessment_id))
-            assessment = get_assessment(settings, numeric_assessment_id)
+        if assessment_id is None:
+            assessment = get_default_assessment(settings)
             if assessment is not None:
+                assessment_id = assessment.id
                 assessment_type = assessment.assessment_type
-        except ValueError:
-            pass
+            else:
+                assessment_id = "default"
+        else:
+            try:
+                numeric_assessment_id = int(str(assessment_id))
+                assessment = get_assessment(settings, numeric_assessment_id)
+                if assessment is not None:
+                    assessment_type = assessment.assessment_type
+            except ValueError:
+                pass
         return {
             "downloadUrl": generate_assessment_download_link(settings),
             "assessmentId": assessment_id,

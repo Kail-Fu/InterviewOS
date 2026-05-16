@@ -1242,12 +1242,20 @@ function LoadingPlaceholder({ reportId }) {
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
   const preview = searchParams ? searchParams.get('preview') : null
   const reportUrl = `/report/${reportId}`
+  const hasValidReportId = /^\d+$/.test(String(reportId || ''))
   const [status, setStatus] = useState('checking')
   const [error, setError] = useState('')
   const [lastUpdate, setLastUpdate] = useState('')
   const [pollCount, setPollCount] = useState(0)
 
   useEffect(() => {
+    if (!hasValidReportId) {
+      setStatus('error')
+      setError('This submission did not create a report id. Please start from a valid assessment link.')
+      setLastUpdate(new Date().toLocaleTimeString())
+      return
+    }
+
     if (preview && ['checking', 'processing', 'ready', 'error'].includes(preview)) {
       setStatus(preview)
       setError(preview === 'error' ? 'Preview mode: unable to reach report endpoint.' : '')
@@ -1303,7 +1311,7 @@ function LoadingPlaceholder({ reportId }) {
         window.clearTimeout(timer)
       }
     }
-  }, [reportId, reportUrl, preview])
+  }, [hasValidReportId, reportId, reportUrl, preview])
 
   const statusTitle = status === 'ready'
     ? 'Report ready'
@@ -1326,14 +1334,14 @@ function LoadingPlaceholder({ reportId }) {
         <h1>{statusTitle}</h1>
         <p className="subtitle">Your submission was uploaded. We are preparing your final evaluation report.</p>
 
-        {status !== 'ready' && (
+        {status !== 'ready' && hasValidReportId && (
           <div className="candidate-progress-track" aria-hidden>
             <div className="candidate-progress-bar" />
           </div>
         )}
 
         <div className="candidate-meta-block">
-          <p><strong>Report link:</strong> <code>{reportUrl}</code></p>
+          <p><strong>Report link:</strong> <code>{hasValidReportId ? reportUrl : 'Unavailable'}</code></p>
           {status === 'processing' && (
             <p>
               <strong>Status:</strong> processing in background
@@ -1346,7 +1354,7 @@ function LoadingPlaceholder({ reportId }) {
 
         {status === 'error' && <p className="error">Unable to refresh status right now. {error}</p>}
         <div className="actions-row candidate-status-actions">
-          <button type="button" onClick={() => navigateTo(reportUrl)}>Open Report</button>
+          {hasValidReportId && <button type="button" onClick={() => navigateTo(reportUrl)}>Open Report</button>}
           <button type="button" className="secondary" onClick={() => navigateTo('/dashboard')}>Back to Dashboard</button>
         </div>
       </section>
