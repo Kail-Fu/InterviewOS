@@ -12,7 +12,7 @@
 <p align="center">
   <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#run-locally-in-one-command"><img alt="Docker" src="https://img.shields.io/badge/docker-required-blue.svg"></a>
-  <img alt="Version" src="https://img.shields.io/badge/version-1.0.0-informational.svg">
+  <img alt="Version" src="https://img.shields.io/badge/version-1.1.0-informational.svg">
 </p>
 
 ---
@@ -148,6 +148,17 @@ A bundled sample assessment is included so you can test the full flow immediatel
   * local screen-time analyzer hook is enabled for uploaded workflow recordings (duration-based baseline in OSS mode)
   * candidate completion now lands on a loading screen that polls report readiness and auto-redirects to `/report/:id`
   * assessment4 dual-artifact upload path is supported via `POST /upload-assessment4` (submission zip + notebook)
+  * report scoring now uses candidate-scoped submission and reflection artifacts instead of assessment-wide latest files
+* reliability and security hardening:
+  * invite supersession and resend behavior are scoped by assessment
+  * invalid/missing assessments are rejected before invite or candidate-row creation
+  * multipart recording uploads validate part numbers, reject empty completion, expire abandoned sessions, and clean up stale temp files
+  * local reflection uploads require a short-lived invite-validated upload token bound to the generated recording key
+  * default local assessment starts resolve to a real assessment id, preventing `/report/default` loading loops
+* frontend build reproducibility:
+  * `frontend/package-lock.json` is committed
+  * frontend Docker builds use `npm ci`
+  * Vite dependencies are upgraded and `npm audit` reports zero vulnerabilities
 
 ---
 
@@ -169,16 +180,36 @@ Planned next steps:
 
 * recording reliability hardening for multipart and resume/error handling
 * deepen report parity (`newreport`) with richer diff/code-review panels and media playback
-* tighten candidate-to-report linkage so completion always resolves to the correct report id
 * expand evaluator parity from baseline checks to old-repo full autograder/test-case flows by assessment type
 * automated evaluation and rubric scoring
 * ATS and webhook integrations
 
 ---
 
+## Version log
+
+### v1.1.0
+
+Released after the original `v1.0.0` README status. This release focuses on making the local open-source workflow safer and more deterministic:
+
+* tightened invite lifecycle behavior so resend/supersession is assessment-scoped
+* fixed invalid-assessment edge cases across invite, resend, and upload paths
+* hardened multipart recording uploads with malformed-part validation, empty-completion rejection, abandoned-session expiry, and temp-file cleanup
+* protected local reflection uploads with invite-validated, short-lived, one-use upload tokens
+* fixed candidate artifact attribution so reports use the correct candidate ZIP/reflection files rather than assessment-wide latest files
+* fixed the default assessment loading loop by resolving default starts to a real assessment id and guarding invalid report ids
+* improved SES reminder email parity with HTML invite emails
+* added reproducible frontend dependency installs with `package-lock.json`, `npm ci`, upgraded Vite dependencies, and a clean frontend audit/build path
+
+### v1.0.0
+
+Initial production-ready open-source local workflow: Docker Compose setup, Mailpit email flow, admin dashboard, assessment creation/result views, invite management, candidate recording flow, artifact upload, background report generation, and report readiness polling.
+
+---
+
 ## Status
 
-InterviewOS `v1.0.0` is production-ready for the open-source local workflow. Core migration includes invite, dashboard, assessment creation/result, candidate assessment flow, recording upload, and generated report viewing with readiness polling.
+InterviewOS `v1.1.0` is production-ready for the open-source local workflow. The current release includes the original invite/dashboard/assessment/candidate/report flow plus candidate-scoped artifact attribution, safer local upload handling, hardened multipart recording behavior, and reproducible frontend builds.
 
 If you try it and hit sharp edges, please open an issue. Feature requests and PRs are welcome.
 
