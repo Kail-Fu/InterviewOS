@@ -1,0 +1,117 @@
+{
+  "document_kind": "homeowners_declarations",
+  "policy": {
+    "number": "HO-459013-AX",
+    "type": "Homeowners (HO-5)",
+    "effective_date": "05/01/2025",
+    "expiration_date": "05/01/2026",
+    "insurer": {
+      "name": "NORTHFIELD INSURANCE GROUP",
+      "naic": ""
+    },
+    "producer": {
+      "agency_name": "Beacon Risk Advisors",
+      "contact_name": "Linda Park",
+      "phone": "(617) 555-9922",
+      "email": ""
+    },
+    "premium_summary": {
+      "total_premium": "$1,550",
+      "fees_and_taxes": "State Surcharge $60, Fire Fee $10",
+      "term": "05/01/2025 - 05/01/2026"
+    }
+  },
+  "insureds": [
+    {
+      "name": "Carlos Alvarez & Maria Alvarez",
+      "mailing_address": "12 Beacon Terrace, Boston, MA 02118"
+    }
+  ],
+  "locations": [
+    {
+      "address": "12 Beacon Terrace, Boston, MA 02118"
+    }
+  ],
+  "coverages": [
+    {
+      "name": "Coverage A – Dwelling",
+      "limit": "$550,000",
+      "aggregate": null,
+      "deductible": "$1,500",
+      "premium": "$960",
+      "notes": null
+    },
+    {
+      "name": "Coverage B – Other Structures",
+      "limit": "$55,000",
+      "aggregate": null,
+      "deductible": "$1,500",
+      "premium": "$70",
+      "notes": null
+    },
+    {
+      "name": "Coverage C – Personal Property",
+      "limit": "$330,000",
+      "aggregate": null,
+      "deductible": "$1,500",
+      "premium": "$380",
+      "notes": null
+    },
+    {
+      "name": "Coverage D – Loss of Use",
+      "limit": "$110,000",
+      "aggregate": null,
+      "deductible": "N/A",
+      "premium": "Included",
+      "notes": null
+    },
+    {
+      "name": "Coverage E – Personal Liability",
+      "limit": "$500,000",
+      "aggregate": null,
+      "deductible": "N/A",
+      "premium": "$140",
+      "notes": null
+    },
+    {
+      "name": "Coverage F – Medical Payments",
+      "limit": "$5,000",
+      "aggregate": null,
+      "deductible": "N/A",
+      "premium": "$40",
+      "notes": null
+    }
+  ],
+  "deductibles": [
+    {
+      "type": "All Perils",
+      "amount": "$1,500"
+    },
+    {
+      "type": "Wind/Hurricane",
+      "amount": "2% of Coverage A"
+    }
+  ],
+  "homeowners": {
+    "dwelling_coverage_a": "$550,000",
+    "other_structures_coverage_b": "$55,000",
+    "personal_property_coverage_c": "$330,000",
+    "loss_of_use_coverage_d": "$110,000",
+    "liability_coverage_e": "$500,000",
+    "medical_payments_coverage_f": "$5,000",
+    "wind_or_hurricane_deductible": "2% of Coverage A",
+    "endorsements": [
+      "HO-15 Special Personal Property",
+      "Limited Water Back-Up Coverage",
+      "Ordinance or Law – 10%"
+    ],
+    "mortgagees": [
+      {
+        "name": "East Harbor Bank",
+        "address": "P.O. Box 300, Boston, MA 02112"
+      }
+    ]
+  },
+  "auto": null,
+  "certificate": null
+}

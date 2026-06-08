@@ -1,0 +1,54 @@
+{
+  "document_kind": "certificate_of_insurance",
+  "policy": {
+    "number": "",
+    "type": null,
+    "effective_date": "",
+    "expiration_date": "",
+    "insurer": null,
+    "producer": {
+      "agency_name": "Everest Insurance Brokers",
+      "contact_name": "",
+      "phone": "(800) 777-6767",
+      "email": ""
+    },
+    "premium_summary": null
+  },
+  "insureds": [
+    {
+      "name": "Atlas Renovations LLC",
+      "mailing_address": "88 Riverfront Ave, Jersey City, NJ 07310"
+    }
+  ],
+  "locations": null,
+  "coverages": null,
+  "deductibles": null,
+  "homeowners": null,
+  "auto": null,
+  "certificate": {
+    "certificate_holder": "Port Authority of NY & NJ, 4 World Trade Center, New York, NY 10007",
+    "policies": [
+      {
+        "line": "General Liability",
+        "policy_number": "GL-101010",
+        "effective_date": "07/15/2025",
+        "expiration_date": "07/15/2026",
+        "limits_text": "$1,000,000 per occurrence / $2,000,000 aggregate"
+      },
+      {
+        "line": "Automobile Liability",
+        "policy_number": "AL-202020",
+        "effective_date": "07/15/2025",
+        "expiration_date": "07/15/2026",
+        "limits_text": "$1,000,000 CSL"
+      },
+      {
+        "line": "Workers Compensation",
+        "policy_number": "WC-303030",
+        "effective_date": "07/15/2025",
+        "expiration_date": "07/15/2026",
+        "limits_text": "Statutory Limits"
+      }
+    ]
+  }
+}

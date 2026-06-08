@@ -1,0 +1,116 @@
+{
+  "document_kind": "homeowners_declarations",
+  "policy": {
+    "number": "HO-CHI-789456",
+    "type": "Homeowners (HO-3)",
+    "effective_date": "11/15/2025",
+    "expiration_date": "11/15/2026",
+    "insurer": {
+      "name": "GREAT LAKES INSURANCE",
+      "naic": ""
+    },
+    "producer": {
+      "agency_name": "Midwest Coverage Inc.",
+      "contact_name": "Daniel King",
+      "phone": "(312) 555-8822",
+      "email": ""
+    },
+    "premium_summary": {
+      "total_premium": "$1,840",
+      "fees_and_taxes": "$90",
+      "term": "12 months"
+    }
+  },
+  "insureds": [
+    {
+      "name": "Emily Davis",
+      "mailing_address": "500 Lakeshore Dr, Chicago, IL 60611"
+    }
+  ],
+  "locations": [
+    {
+      "address": "500 Lakeshore Dr, Chicago, IL 60611"
+    }
+  ],
+  "coverages": [
+    {
+      "name": "Dwelling",
+      "limit": "$600,000",
+      "aggregate": null,
+      "deductible": "$2,500",
+      "premium": "$1,200",
+      "notes": null
+    },
+    {
+      "name": "Other Structures",
+      "limit": "$60,000",
+      "aggregate": null,
+      "deductible": "$2,500",
+      "premium": "$90",
+      "notes": null
+    },
+    {
+      "name": "Personal Property",
+      "limit": "$300,000",
+      "aggregate": null,
+      "deductible": "$2,500",
+      "premium": "$350",
+      "notes": null
+    },
+    {
+      "name": "Loss of Use",
+      "limit": "$120,000",
+      "aggregate": null,
+      "deductible": null,
+      "premium": "Included",
+      "notes": null
+    },
+    {
+      "name": "Liability",
+      "limit": "$500,000",
+      "aggregate": null,
+      "deductible": null,
+      "premium": "$160",
+      "notes": null
+    },
+    {
+      "name": "Medical Payments",
+      "limit": "$5,000",
+      "aggregate": null,
+      "deductible": null,
+      "premium": "$40",
+      "notes": null
+    }
+  ],
+  "deductibles": [
+    {
+      "type": "All Perils",
+      "amount": "$2,500"
+    },
+    {
+      "type": "Windstorm/Hail",
+      "amount": "$3,000"
+    }
+  ],
+  "homeowners": {
+    "dwelling_coverage_a": "$600,000",
+    "other_structures_coverage_b": "$60,000",
+    "personal_property_coverage_c": "$300,000",
+    "loss_of_use_coverage_d": "$120,000",
+    "liability_coverage_e": "$500,000",
+    "medical_payments_coverage_f": "$5,000",
+    "wind_or_hurricane_deductible": "",
+    "endorsements": [
+      "Earthquake Coverage",
+      "Water Backup Coverage"
+    ],
+    "mortgagees": [
+      {
+        "name": "First Chicago Bank",
+        "address": "123 Michigan Ave, Chicago, IL 60611"
+      }
+    ]
+  },
+  "auto": null,
+  "certificate": null
+}

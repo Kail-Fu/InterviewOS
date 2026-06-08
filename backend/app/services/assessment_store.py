@@ -42,6 +42,12 @@ class QuestionRecord:
     overview: str
     estimated_time: str
     assessment_type: str
+    detailed_description: str | None = None
+    tasks_json: str | None = None
+    skills_json: str | None = None
+    evaluation_json: str | None = None
+    deliverables_json: str | None = None
+    allowed_resources: str | None = None
 
 
 @dataclass
@@ -61,6 +67,7 @@ class ReportRecord:
     submission_file: str | None
     assessment_recording_key: str | None
     reflection_recording_key: str | None
+    payload: dict[str, object]
     updated_at: str
 
 
@@ -147,6 +154,7 @@ def init_assessment_store(settings: Settings) -> None:
                 submission_file TEXT,
                 assessment_recording_key TEXT,
                 reflection_recording_key TEXT,
+                payload_json TEXT NOT NULL DEFAULT '{}',
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY (candidate_id) REFERENCES candidates(id),
                 FOREIGN KEY (assessment_id) REFERENCES assessments(id)
@@ -178,6 +186,13 @@ def init_assessment_store(settings: Settings) -> None:
         _ensure_column(connection, "assessments", "job_desc", "TEXT")
         _ensure_column(connection, "assessments", "assessment_type", "TEXT NOT NULL DEFAULT 'default'")
         _ensure_column(connection, "questions", "assessment_type", "TEXT NOT NULL DEFAULT 'default'")
+        _ensure_column(connection, "questions", "detailed_description", "TEXT")
+        _ensure_column(connection, "questions", "tasks_json", "TEXT")
+        _ensure_column(connection, "questions", "skills_json", "TEXT")
+        _ensure_column(connection, "questions", "evaluation_json", "TEXT")
+        _ensure_column(connection, "questions", "deliverables_json", "TEXT")
+        _ensure_column(connection, "questions", "allowed_resources", "TEXT")
+        _ensure_column(connection, "reports", "payload_json", "TEXT NOT NULL DEFAULT '{}'")
 
         _seed_questions(connection)
         _seed_demo_rows(connection)
@@ -622,7 +637,9 @@ def get_question(settings: Settings, question_id: int) -> QuestionRecord | None:
     with _connect(settings) as connection:
         row = connection.execute(
             """
-            SELECT id, title, summary, difficulty, role, language, overview, estimated_time, assessment_type
+            SELECT
+                id, title, summary, difficulty, role, language, overview, estimated_time, assessment_type,
+                detailed_description, tasks_json, skills_json, evaluation_json, deliverables_json, allowed_resources
             FROM questions
             WHERE id = ?
             """,
@@ -640,6 +657,12 @@ def get_question(settings: Settings, question_id: int) -> QuestionRecord | None:
             overview=str(row["overview"]),
             estimated_time=str(row["estimated_time"]),
             assessment_type=str(row["assessment_type"] or "default"),
+            detailed_description=row["detailed_description"],
+            tasks_json=row["tasks_json"],
+            skills_json=row["skills_json"],
+            evaluation_json=row["evaluation_json"],
+            deliverables_json=row["deliverables_json"],
+            allowed_resources=row["allowed_resources"],
         )
 
 
@@ -711,6 +734,7 @@ def _row_to_report_record(row: sqlite3.Row) -> ReportRecord:
         submission_file=row["submission_file"],
         assessment_recording_key=row["assessment_recording_key"],
         reflection_recording_key=row["reflection_recording_key"],
+        payload=json.loads(row["payload_json"] or "{}"),
         updated_at=str(row["updated_at"]),
     )
 
@@ -733,6 +757,7 @@ def upsert_report(
     submission_file: str | None,
     assessment_recording_key: str | None,
     reflection_recording_key: str | None,
+    payload: dict[str, object] | None = None,
 ) -> ReportRecord:
     now = _iso_now()
     with _connect(settings) as connection:
@@ -741,8 +766,8 @@ def upsert_report(
             INSERT INTO reports (
                 candidate_id, assessment_id, score, code_quality, results_json, diffs_json, code_summary_json,
                 report_ready, error, assessment_type, app_usage_json, total_duration, submission_file,
-                assessment_recording_key, reflection_recording_key, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                assessment_recording_key, reflection_recording_key, payload_json, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(candidate_id) DO UPDATE SET
                 assessment_id = excluded.assessment_id,
                 score = excluded.score,
@@ -758,6 +783,7 @@ def upsert_report(
                 submission_file = excluded.submission_file,
                 assessment_recording_key = excluded.assessment_recording_key,
                 reflection_recording_key = excluded.reflection_recording_key,
+                payload_json = excluded.payload_json,
                 updated_at = excluded.updated_at
             """,
             (
@@ -776,6 +802,7 @@ def upsert_report(
                 submission_file,
                 assessment_recording_key,
                 reflection_recording_key,
+                json.dumps(payload or {}),
                 now,
             ),
         )
@@ -813,3 +840,36 @@ def get_latest_report_by_assessment(settings: Settings, assessment_id: int) -> R
         if row is None:
             return None
         return _row_to_report_record(row)
+
+
+def question_to_payload(question: QuestionRecord | None) -> dict[str, object] | None:
+    if question is None:
+        return None
+
+    def parse_list(raw: str | None) -> list[object]:
+        if not raw:
+            return []
+        try:
+            parsed = json.loads(raw)
+            return parsed if isinstance(parsed, list) else []
+        except json.JSONDecodeError:
+            return []
+
+    return {
+        "id": question.id,
+        "_id": question.id,
+        "title": question.title,
+        "summary": question.summary,
+        "difficulty": question.difficulty,
+        "role": question.role,
+        "language": question.language,
+        "overview": question.overview,
+        "detailedDescription": question.detailed_description,
+        "estimatedTime": question.estimated_time,
+        "assessmentType": question.assessment_type,
+        "tasks": parse_list(question.tasks_json),
+        "skillsTested": parse_list(question.skills_json),
+        "evaluationCriteria": parse_list(question.evaluation_json),
+        "deliverables": parse_list(question.deliverables_json),
+        "allowedResources": question.allowed_resources,
+    }

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "e880df65-adca-4111-9651-e355c85a0498",
+    "name": "Alice",
+    "team": "marketing",
+    "status": "active",
+    "lastLogin": "2024-12-10T10:00:00Z"
+  },
+  {
+    "id": "0e382ea0-c49b-4ec9-b91a-81cd604dfa5e",
+    "name": "Bob",
+    "team": "sales",
+    "status": "inactive",
+    "lastLogin": "2024-03-01T10:00:00Z"
+  }
+]

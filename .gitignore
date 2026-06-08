@@ -38,6 +38,8 @@ backend/recordings/**
 !backend/recordings/.gitkeep
 backend/submissions/**
 !backend/submissions/.gitkeep
+grader/workspace/**
+grader/assessment4/.venv_autograder/**
 
 # Local planning artifacts
 docs/FORETOKEN_DEMO_MIGRATION_PLAN.md

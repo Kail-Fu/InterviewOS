@@ -1,0 +1,105 @@
+{
+  "document_kind": "homeowners_declarations",
+  "policy": {
+    "number": "CONDO-778899-FL",
+    "type": "Condo Owners (HO-6)",
+    "effective_date": "08/01/2025",
+    "expiration_date": "08/01/2026",
+    "insurer": {
+      "name": "Harbor Mutual",
+      "naic": ""
+    },
+    "producer": {
+      "agency_name": "Coastal Insurance Partners",
+      "contact_name": "Sofia Ramos",
+      "phone": "(305) 555-6611",
+      "email": ""
+    },
+    "premium_summary": {
+      "total_premium": "$520",
+      "fees_and_taxes": "$35",
+      "term": "12 months"
+    }
+  },
+  "insureds": [
+    {
+      "name": "Luis Fernandez",
+      "mailing_address": "101 Ocean Dr Unit 1204, Miami Beach, FL 33139"
+    }
+  ],
+  "locations": [
+    {
+      "address": "101 Ocean Dr Unit 1204, Miami Beach, FL 33139"
+    }
+  ],
+  "coverages": [
+    {
+      "name": "Coverage A – Dwelling Improvements",
+      "limit": "$75,000",
+      "aggregate": null,
+      "deductible": "$1,000",
+      "premium": "$210",
+      "notes": null
+    },
+    {
+      "name": "Coverage C – Personal Property",
+      "limit": "$50,000",
+      "aggregate": null,
+      "deductible": "$1,000",
+      "premium": "$160",
+      "notes": null
+    },
+    {
+      "name": "Coverage D – Loss of Use",
+      "limit": "$15,000",
+      "aggregate": null,
+      "deductible": "N/A",
+      "premium": "Included",
+      "notes": null
+    },
+    {
+      "name": "Coverage E – Personal Liability",
+      "limit": "$300,000",
+      "aggregate": null,
+      "deductible": "N/A",
+      "premium": "$95",
+      "notes": null
+    },
+    {
+      "name": "Coverage F – Medical Payments",
+      "limit": "$3,000",
+      "aggregate": null,
+      "deductible": "N/A",
+      "premium": "$25",
+      "notes": null
+    }
+  ],
+  "deductibles": [
+    {
+      "type": "All Perils",
+      "amount": "$1,000"
+    },
+    {
+      "type": "Hurricane",
+      "amount": "3% of Coverage A"
+    }
+  ],
+  "homeowners": {
+    "dwelling_coverage_a": "$75,000",
+    "other_structures_coverage_b": "",
+    "personal_property_coverage_c": "$50,000",
+    "loss_of_use_coverage_d": "$15,000",
+    "liability_coverage_e": "$300,000",
+    "medical_payments_coverage_f": "$3,000",
+    "wind_or_hurricane_deductible": "3% of Coverage A",
+    "endorsements": [],
+    "mortgagees": [
+      {
+        "name": "Miami Community Bank",
+        "address": "700 Brickell Ave, Miami, FL 33131"
+      }
+    ]
+  },
+  "auto": null,
+  "certificate": null
+}

@@ -12,7 +12,7 @@
 <p align="center">
   <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#run-locally-in-one-command"><img alt="Docker" src="https://img.shields.io/badge/docker-required-blue.svg"></a>
-  <img alt="Version" src="https://img.shields.io/badge/version-1.1.0-informational.svg">
+  <img alt="Version" src="https://img.shields.io/badge/version-1.2.0-informational.svg">
 </p>
 
 ---
@@ -102,7 +102,7 @@ Prerequisite: Docker Desktop running.
 
 ```bash
 make dev
-````
+```
 
 This starts:
 
@@ -111,6 +111,14 @@ This starts:
 * Local email inbox (Mailpit): [http://localhost:8025](http://localhost:8025)
 
 A bundled sample assessment is included so you can test the full flow immediately.
+
+For full executable report generation, start the optional grader worker:
+
+```bash
+make dev-full
+```
+
+This keeps the default local stack light while enabling heavier assessment evaluators for report generation.
 
 ---
 
@@ -141,14 +149,17 @@ A bundled sample assessment is included so you can test the full flow immediatel
   * `POST /api/recording/start-multipart-upload`, `POST /api/recording/upload-part`, `POST /api/recording/complete-multipart-upload`
   * `POST /upload-zip`, `POST /download-assessment`
 * report experience baseline:
-  * report route at `/report/:id` backed by persisted candidate report payloads from local artifacts
+  * report route at `/report/:id` backed by persisted canonical candidate report payloads
   * report API compatibility endpoint: `GET /report/{id}`
   * assessment-result action now includes `View Report`
   * `POST /upload-zip` now triggers assessment-linked background scoring dispatch and persists report records in local SQLite
-  * local screen-time analyzer hook is enabled for uploaded workflow recordings (duration-based baseline in OSS mode)
+  * optional grader worker mode via `make dev-full` for executable evaluators across supported assessment types
+  * local artifact endpoints support submission downloads and report video playback without AWS
+  * local screen-time analyzer hook is enabled for uploaded workflow recordings (duration baseline, richer worker path when enabled)
   * candidate completion now lands on a loading screen that polls report readiness and auto-redirects to `/report/:id`
   * assessment4 dual-artifact upload path is supported via `POST /upload-assessment4` (submission zip + notebook)
   * report scoring now uses candidate-scoped submission and reflection artifacts instead of assessment-wide latest files
+  * report UI now renders score, test evidence, assessment overview, app usage, code diffs, code-quality findings, NER metrics, videos, and submission download actions when present
 * reliability and security hardening:
   * invite supersession and resend behavior are scoped by assessment
   * invalid/missing assessments are rejected before invite or candidate-row creation
@@ -168,6 +179,7 @@ InterviewOS is split into:
 
 * `frontend/`: candidate and admin UI
 * `backend/`: API, invite lifecycle, local SQLite state, assessment packaging, and report scoring pipeline
+* `grader/`: optional full-report worker with heavier evaluator runtimes and starter fixtures
 * `docker-compose.yml`: local end-to-end dev environment (including Mailpit)
 
 For development details, see [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -178,15 +190,25 @@ For development details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Planned next steps:
 
-* recording reliability hardening for multipart and resume/error handling
-* deepen report parity (`newreport`) with richer diff/code-review panels and media playback
-* expand evaluator parity from baseline checks to old-repo full autograder/test-case flows by assessment type
-* automated evaluation and rubric scoring
+* expand the grader worker with more fixture submissions and CI coverage
+* add optional S3-backed recording/submission artifact providers for production deployments
+* add richer deterministic rubric scoring controls per assessment type
 * ATS and webhook integrations
 
 ---
 
 ## Version log
+
+### v1.2.0
+
+Adds the optional full-report generation path:
+
+* added `make dev-full` and an optional `grader` Docker service for executable report evaluators
+* added backend worker dispatch config while keeping `make dev` on the lightweight local evaluator
+* added canonical report payload persistence with compatibility for existing report columns
+* added local artifact endpoints for submission download and assessment/reflection video playback
+* added evaluator paths for the four supported assessments: Users API, Insurance Document Processor, Supreme Court RAG, and NER Product Attributes
+* upgraded the report UI to render richer test evidence, diffs, code-quality findings, app usage, video artifacts, NER metrics, and submission downloads
 
 ### v1.1.0
 
@@ -209,7 +231,7 @@ Initial production-ready open-source local workflow: Docker Compose setup, Mailp
 
 ## Status
 
-InterviewOS `v1.1.0` is production-ready for the open-source local workflow. The current release includes the original invite/dashboard/assessment/candidate/report flow plus candidate-scoped artifact attribution, safer local upload handling, hardened multipart recording behavior, and reproducible frontend builds.
+InterviewOS `v1.2.0` is production-ready for the open-source local workflow. The default stack remains lightweight and local-first; the optional full grader worker enables deeper executable report generation when you need assessment-specific grading.
 
 If you try it and hit sharp edges, please open an issue. Feature requests and PRs are welcome.
 

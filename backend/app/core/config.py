@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     local_recordings_dir: str = "recordings"
     local_db_path: str = "data/interviewos.sqlite3"
     recording_provider: Literal["local", "s3"] = "local"
+    report_grader_provider: Literal["local", "worker"] = "local"
+    grader_worker_url: str = "http://grader:9000"
+    report_grader_timeout_seconds: int = 900
+    openai_api_key: str | None = None
+    gemini_api_key: str | None = None
 
     assessment_bucket: str = "online-assessments"
     assessment_object_key: str = "assessment.zip"
@@ -59,6 +64,11 @@ class Settings(BaseSettings):
     @field_validator("frontend_base_url")
     @classmethod
     def normalize_frontend_base_url(cls, value: str) -> str:
+        return value.rstrip("/")
+
+    @field_validator("grader_worker_url")
+    @classmethod
+    def normalize_grader_worker_url(cls, value: str) -> str:
         return value.rstrip("/")
 
 

@@ -11,6 +11,11 @@ services:
       EMAIL_PROVIDER: smtp
       STORAGE_PROVIDER: local
       RECORDING_PROVIDER: local
+      REPORT_GRADER_PROVIDER: ${REPORT_GRADER_PROVIDER:-local}
+      GRADER_WORKER_URL: http://grader:9000
+      REPORT_GRADER_TIMEOUT_SECONDS: 900
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       EMAIL_FROM: assessment@example.com
       LOCAL_ASSETS_DIR: assets
       LOCAL_ASSESSMENT_FILENAME: example_assessment.zip
@@ -41,6 +46,21 @@ services:
       - "5173:5173"
     depends_on:
       - backend
+
+  grader:
+    profiles:
+      - full
+    build:
+      context: ./grader
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./backend/submissions:/app/submissions
+      - ./backend/recordings:/app/recordings
+      - ./grader/workspace:/app/workspace
 
   mailpit:
     image: axllent/mailpit:latest

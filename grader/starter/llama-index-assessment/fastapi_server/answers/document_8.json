@@ -1,0 +1,50 @@
+{
+  "document_kind": "other",
+  "policy": {
+    "number": "UMB-4444-CO",
+    "type": "Personal Umbrella",
+    "effective_date": "09/01/2025",
+    "expiration_date": "09/01/2026",
+    "insurer": null,
+    "producer": {
+      "agency_name": "Rocky Mountain Brokers",
+      "contact_name": "Tyler Reed",
+      "phone": "(303) 555-4040",
+      "email": ""
+    },
+    "premium_summary": {
+      "total_premium": "$380",
+      "fees_and_taxes": "$20",
+      "term": "12 months"
+    }
+  },
+  "insureds": [
+    {
+      "name": "Priya Sharma",
+      "mailing_address": "8400 Cherry St, Denver, CO 80220"
+    }
+  ],
+  "locations": null,
+  "coverages": [
+    {
+      "name": "Personal Liability",
+      "limit": "$2,000,000",
+      "aggregate": "$2,000,000",
+      "deductible": "$0",
+      "premium": null,
+      "notes": null
+    },
+    {
+      "name": "Excess UM/UIM",
+      "limit": "$1,000,000",
+      "aggregate": "—",
+      "deductible": "$0",
+      "premium": null,
+      "notes": null
+    }
+  ],
+  "deductibles": null,
+  "homeowners": null,
+  "auto": null,
+  "certificate": null
+}

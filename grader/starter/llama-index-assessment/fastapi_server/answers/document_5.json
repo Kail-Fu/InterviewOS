@@ -1,0 +1,105 @@
+{
+  "document_kind": "auto_declarations",
+  "policy": {
+    "number": "AUTO-SF-808080",
+    "type": null,
+    "effective_date": "2025-06-15",
+    "expiration_date": "2026-06-15",
+    "insurer": {
+      "name": "URBAN AUTO INSURANCE",
+      "naic": ""
+    },
+    "producer": {
+      "agency_name": "Bayline Brokers LLC",
+      "contact_name": "Marcus Lee",
+      "phone": "(415) 555-7440",
+      "email": ""
+    },
+    "premium_summary": {
+      "total_premium": 1235,
+      "fees_and_taxes": 55,
+      "term": ""
+    }
+  },
+  "insureds": [
+    {
+      "name": "Nina Patel",
+      "mailing_address": "1450 Howard St Apt 2B, San Francisco, CA 94103"
+    }
+  ],
+  "locations": null,
+  "coverages": [
+    {
+      "name": "Bodily Injury Liability",
+      "limit": "$250,000/$500,000",
+      "aggregate": null,
+      "deductible": null,
+      "premium": 420,
+      "notes": null
+    },
+    {
+      "name": "Property Damage",
+      "limit": "$100,000",
+      "aggregate": null,
+      "deductible": null,
+      "premium": 160,
+      "notes": null
+    },
+    {
+      "name": "Comprehensive",
+      "limit": "Actual Cash Value",
+      "aggregate": null,
+      "deductible": 500,
+      "premium": 210,
+      "notes": null
+    },
+    {
+      "name": "Collision",
+      "limit": "Actual Cash Value",
+      "aggregate": null,
+      "deductible": 1000,
+      "premium": 350,
+      "notes": null
+    },
+    {
+      "name": "Uninsured/Underinsured Motorist",
+      "limit": "$250,000/$500,000",
+      "aggregate": null,
+      "deductible": null,
+      "premium": 95,
+      "notes": null
+    }
+  ],
+  "deductibles": [
+    {
+      "type": "Comprehensive",
+      "amount": 500
+    },
+    {
+      "type": "Collision",
+      "amount": 1000
+    }
+  ],
+  "homeowners": null,
+  "auto": {
+    "vehicles": [
+      {
+        "year": "2022",
+        "make": "Tesla",
+        "model": "Model 3",
+        "vin": "5YJ3E1EA7KF123999",
+        "garaging_address": "1450 Howard St, San Francisco, CA 94103",
+        "lienholders": [
+          "First Tech FCU"
+        ]
+      }
+    ],
+    "drivers": [
+      {
+        "name": "Nina Patel",
+        "date_of_birth": "1993-07-22"
+      }
+    ]
+  },
+  "certificate": null
+}

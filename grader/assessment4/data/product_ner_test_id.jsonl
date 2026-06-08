@@ -1,0 +1,100 @@
+{"tokens": ["LENOVO", "red", "Tv"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["Patagonia", "women's", "creen", "m", "dress"], "ner_tags": ["B-BRAND", "B-GENDER", "B-COLOR", "B-SIZE", "B-TYPE"]}
+{"tokens": ["uniqlo", "Men'S", "linen", "SsEATER"], "ner_tags": ["B-BRAND", "B-GENDER", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["ADIDAS", "RED", "Hoodie"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["Tumi", "white", "Polyester", "WALLET"], "ner_tags": ["B-BRAND", "B-COLOR", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["Under Armour", "GREEN", "XXL", "Shoes"], "ner_tags": ["B-BRAND", "B-COLOR", "B-SIZE", "B-TYPE"]}
+{"tokens": ["dell", "SILVER", "TABLET"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["apple", "brown", "Smartphone"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["JANSPORT", "Polypster", "messenger", "Bag"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE", "I-TYPE"]}
+{"tokens": ["Article", "wooden", "SOFA"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["article", "WOODEN", "Gold", "dining", "table"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-COLOR", "B-TYPE", "I-TYPE"]}
+{"tokens": ["Akus", "Green", "LAPTOP"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["West Elm", "WOODEN", "Black", "coffee", "TABLE"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-COLOR", "B-TYPE", "I-TYPE"]}
+{"tokens": ["Wayfair", "glass", "Bookshelf"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["crate & barrel", "GLASS", "chair"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["Lg", "brown", "SMARTPHONE"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["columbia", "women's", "gold", "S", "hoodie"], "ner_tags": ["B-BRAND", "B-GENDER", "B-COLOR", "B-SIZE", "B-TYPE"]}
+{"tokens": ["crate & barrel", "black", "Desk"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["Jansport", "Backpack"], "ner_tags": ["B-BRAND", "B-TYPE"]}
+{"tokens": ["appqe", "WHITE", "LAPTOP"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["SAMSUNG", "white", "TABLET"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["CRATE & BARREL", "GLASS", "White", "dihing", "TABLE"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-COLOR", "B-TYPE", "I-TYPE"]}
+{"tokens": ["asus", "red", "Headphones"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["NIKE", "women's", "Dress"], "ner_tags": ["B-BRAND", "B-GENDER", "B-TYPE"]}
+{"tokens": ["sony", "Silver", "monitor"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["Article", "Glass", "chair"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["WAYFAIR", "WOODEq", "Desk"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["under armour", "MEl'S", "bink", "shoes"], "ner_tags": ["B-BRAND", "B-GENDER", "B-COLOR", "B-TYPE"]}
+{"tokens": ["Crate & Barrel", "Coffee", "Table"], "ner_tags": ["B-BRAND", "B-TYPE", "I-TYPE"]}
+{"tokens": ["WEST ELM", "glass", "SOFA"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["JANSPORT", "gray", "NYLON", "WALLEz"], "ner_tags": ["B-BRAND", "B-COLOR", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["WAYFAIR", "METAL", "Chair"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["LG", "Monitor"], "ner_tags": ["B-BRAND", "B-TYPE"]}
+{"tokens": ["Crate & Barrel", "Metal", "brown", "coffee", "TABLE"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-COLOR", "B-TYPE", "I-TYPE"]}
+{"tokens": ["Dell", "Monitor"], "ner_tags": ["B-BRAND", "B-TYPE"]}
+{"tokens": ["jansport", "BLUE", "canvas", "Backpack"], "ner_tags": ["B-BRAND", "B-COLOR", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["asus", "whitd", "MONITOR"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["ARTICLE", "glass", "Silver", "COFFEE", "table"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-COLOR", "B-TYPE", "I-TYPE"]}
+{"tokens": ["Patagonia", "women's", "WHITE", "Denim", "M", "JEANS"], "ner_tags": ["B-BRAND", "B-GENDER", "B-COLOR", "B-MATERIAL", "B-SIZE", "B-TYPE"]}
+{"tokens": ["PATAGONIA", "Women'S", "Wool", "M", "Jeans"], "ner_tags": ["B-BRAND", "B-GENDER", "B-MATERIAL", "B-SIZE", "B-TYPE"]}
+{"tokens": ["Tumi", "gray", "Canvas", "wallet"], "ner_tags": ["B-BRAND", "B-COLOR", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["Osprey", "CANVAS", "wallet"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["nortj face", "Kids", "brown", "COTTON", "xxl", "Shoes"], "ner_tags": ["B-BRAND", "B-GENDER", "B-COLOR", "B-MATERIAL", "B-SIZE", "B-TYPE"]}
+{"tokens": ["Lenovo", "GOLD", "MONITOR"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["LENOVO", "gold", "tv"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["fjallraven", "GOLD", "Wallet"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["samsung", "White", "TABLET"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["adidhs", "KIDS", "FLEECE", "l", "hoodie"], "ner_tags": ["B-BRAND", "B-GENDER", "B-MATERIAL", "B-SIZE", "B-TYPE"]}
+{"tokens": ["FJALLRAVEN", "dlack", "LEATHER", "duffel"], "ner_tags": ["B-BRAND", "B-COLOR", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["ARTICLE", "GLASS", "GREEN", "DESK"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-COLOR", "B-TYPE"]}
+{"tokens": ["IKEA", "Glass", "Green", "Sofa"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-COLOR", "B-TYPE"]}
+{"tokens": ["Pottery Barn", "glass", "chair"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["lenovo", "white", "SMARTPHONE"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["lenovo", "SMARTPHONE"], "ner_tags": ["B-BRAND", "B-TYPE"]}
+{"tokens": ["Wayfair", "Glass", "GOLD", "coffee", "Table"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-COLOR", "B-TYPE", "I-TYPE"]}
+{"tokens": ["Crate & Barrel", "metal", "desk"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["ASUS", "HEADPHONES"], "ner_tags": ["B-BRAND", "B-TYPE"]}
+{"tokens": ["Crate & Barrel", "WOODEN", "BLACK", "sofa"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-COLOR", "B-TYPE"]}
+{"tokens": ["FJALLRAVEN", "white", "Polyester", "Wallet"], "ner_tags": ["B-BRAND", "B-COLOR", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["nike", "Women'S", "GRAY", "leather", "S", "sweater"], "ner_tags": ["B-BRAND", "B-GENDER", "B-COLOR", "B-MATERIAL", "B-SIZE", "B-TYPE"]}
+{"tokens": ["Nike", "KIDS", "Sports", "bra"], "ner_tags": ["B-BRAND", "B-GENDER", "B-TYPE", "I-TYPE"]}
+{"tokens": ["Samsung", "tv"], "ner_tags": ["B-BRAND", "B-TYPE"]}
+{"tokens": ["Asus", "Silver", "monitor"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["asus", "BLACK", "LAPTOP"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["UNIQLO", "kids", "gold", "wool", "Xs", "Jeans"], "ner_tags": ["B-BRAND", "B-GENDER", "B-COLOR", "B-MATERIAL", "B-SIZE", "B-TYPE"]}
+{"tokens": ["UNIQLO", "women's", "COTTON", "SPORTt", "BRA"], "ner_tags": ["B-BRAND", "B-GENDER", "B-MATERIAL", "B-TYPE", "I-TYPE"]}
+{"tokens": ["ikea", "Bookshelf"], "ner_tags": ["B-BRAND", "B-TYPE"]}
+{"tokens": ["hp", "White", "TABLET"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["SAMSONITE", "pink", "messenger", "bag"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE", "I-TYPE"]}
+{"tokens": ["article", "glass", "Dining", "TABLE"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE", "I-TYPE"]}
+{"tokens": ["Pottery Barn", "wooden", "Gray", "bookshelf"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-COLOR", "B-TYPE"]}
+{"tokens": ["WAYFAIR", "Blcck", "dining", "table"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE", "I-TYPE"]}
+{"tokens": ["columbia", "men's", "blue", "XS", "Jacket"], "ner_tags": ["B-BRAND", "B-GENDER", "B-COLOR", "B-SIZE", "B-TYPE"]}
+{"tokens": ["SONY", "Headphones"], "ner_tags": ["B-BRAND", "B-TYPE"]}
+{"tokens": ["Pottery Barn", "Glass", "bookshelf"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["NORTH FACE", "women's", "sports", "Bra"], "ner_tags": ["B-BRAND", "B-GENDER", "B-TYPE", "I-TYPE"]}
+{"tokens": ["ADgDAS", "men's", "Black", "DRESS"], "ner_tags": ["B-BRAND", "B-GENDER", "B-COLOR", "B-TYPE"]}
+{"tokens": ["lenovo", "GREEN", "laptop"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["FJALLRAVEN", "White", "handbag"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["LENOVO", "Tv"], "ner_tags": ["B-BRAND", "B-TYPE"]}
+{"tokens": ["wayfair", "glass", "coffee", "Table"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE", "I-TYPE"]}
+{"tokens": ["Samsonite", "Greep", "DUFFEL"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["Lenovo", "Gold", "SMARTWATCH"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["Wayfair", "GLASS", "chair"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["COLUMBIA", "blue", "POLYESTER", "Dress"], "ner_tags": ["B-BRAND", "B-COLOR", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["ahple", "SILVER", "Smartwatch"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["niue", "MEN'S", "wool", "Hoodie"], "ner_tags": ["B-BRAND", "B-GENDER", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["crate & barrel", "PINK", "DESK"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["SAMSONITE", "silver", "backpack"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["nike", "SILVER", "DENIM", "Sweater"], "ner_tags": ["B-BRAND", "B-COLOR", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["NIKE", "KkDS", "SIjVER", "Fleece", "SHOES"], "ner_tags": ["B-BRAND", "B-GENDER", "B-COLOR", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["Dell", "blue", "tablet"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["sony", "green", "tv"], "ner_tags": ["B-BRAND", "B-COLOR", "B-TYPE"]}
+{"tokens": ["fjallraven", "Messenger", "bag"], "ner_tags": ["B-BRAND", "B-TYPE", "I-TYPE"]}
+{"tokens": ["pataeonia", "men's", "LEATHER", "xxl", "sports", "BRA"], "ner_tags": ["B-BRAND", "B-GENDER", "B-MATERIAL", "B-SIZE", "B-TYPE", "I-TYPE"]}
+{"tokens": ["Crate & Barrel", "GLASS", "gold", "Bookshelf"], "ner_tags": ["B-BRAND", "B-MATERIAL", "B-COLOR", "B-TYPE"]}
+{"tokens": ["PATAGONIA", "GnAY", "WOOL", "jeans"], "ner_tags": ["B-BRAND", "B-COLOR", "B-MATERIAL", "B-TYPE"]}
+{"tokens": ["NORTH FACE", "MEN'S", "BLUE", "sports", "Bra"], "ner_tags": ["B-BRAND", "B-GENDER", "B-COLOR", "B-TYPE", "I-TYPE"]}
+{"tokens": ["Hp", "laptop"], "ner_tags": ["B-BRAND", "B-TYPE"]}
+{"tokens": ["COLUMBIA", "blue", "LINEN", "JEANS"], "ner_tags": ["B-BRAND", "B-COLOR", "B-MATERIAL", "B-TYPE"]}

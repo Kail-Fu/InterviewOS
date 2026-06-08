@@ -7,19 +7,21 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from app.core.config import Settings, get_settings
 from app.services.assessment import generate_assessment_download_link
 from app.services.assessment_store import (
     ReportRecord,
     get_assessment,
+    get_question,
     get_latest_candidate_by_assessment,
     get_latest_reflection_key_for_candidate,
     get_latest_report_by_assessment,
     get_candidate_by_id,
     get_report_by_candidate,
     mark_candidate_submitted,
+    question_to_payload,
     record_reflection_upload,
     upsert_report,
 )
@@ -125,6 +127,30 @@ def _find_latest_submission(settings: Settings, assessment_id: int) -> Path | No
     return max(candidates, key=lambda path: path.stat().st_mtime)
 
 
+def _submission_path(settings: Settings, key: str | None) -> Path | None:
+    if not key:
+        return None
+    root = Path(settings.local_submissions_dir).resolve()
+    path = (root / _safe_key(key)).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return None
+    return path if path.is_file() else None
+
+
+def _recording_path(settings: Settings, key: str | None) -> Path | None:
+    if not key:
+        return None
+    root = Path(settings.local_recordings_dir).resolve()
+    path = (root / _safe_key(key)).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return None
+    return path if path.is_file() else None
+
+
 def _find_latest_recording(settings: Settings, assessment_id: int) -> Path | None:
     root = Path(settings.local_recordings_dir) / "recordings"
     if not root.exists():
@@ -170,7 +196,8 @@ def _report_payload_from_record(
     assessment_title: str,
     submitted_at: str,
 ) -> dict[str, object]:
-    return {
+    payload = dict(report.payload or {})
+    payload.update({
         "id": report.candidate_id,
         "assessmentId": report.assessment_id,
         "assessmentTitle": assessment_title,
@@ -190,7 +217,14 @@ def _report_payload_from_record(
         "assessmentRecordingKey": report.assessment_recording_key,
         "reflectionRecordingKey": report.reflection_recording_key,
         "submittedAt": submitted_at,
-    }
+        "status": "ready" if report.report_ready and not report.error else "failed" if report.error else "processing",
+    })
+    payload["submissionDownloadUrl"] = f"/api/artifacts/submissions/{report.candidate_id}"
+    if report.assessment_recording_key:
+        payload["assessmentVideoUrl"] = f"/api/artifacts/recordings/{report.candidate_id}/assessment"
+    if report.reflection_recording_key:
+        payload["reflectionVideoUrl"] = f"/api/artifacts/recordings/{report.candidate_id}/reflection"
+    return payload
 
 
 def _init_pending_report(
@@ -218,6 +252,22 @@ def _init_pending_report(
         submission_file=submission_file,
         assessment_recording_key=None,
         reflection_recording_key=None,
+        payload={
+            "id": candidate_id,
+            "assessmentId": assessment_id,
+            "score": None,
+            "codeQuality": None,
+            "results": [],
+            "diffs": [],
+            "codeSummaryBullets": ["Submission received. Report generation is in progress."],
+            "reportReady": False,
+            "status": "processing",
+            "error": None,
+            "assessmentType": assessment_type,
+            "appUsage": [],
+            "totalDuration": None,
+            "submissionFile": submission_file,
+        },
     )
 
 
@@ -582,15 +632,19 @@ def report(candidate_id: int, settings: Settings = Depends(get_settings)):
     assessment = get_assessment(settings, candidate.assessment_id)
     if assessment is None:
         raise HTTPException(status_code=404, detail="Assessment not found")
+    question = get_question(settings, assessment.question_id) if assessment.question_id else None
+    question_payload = question_to_payload(question)
 
     if report_record is not None:
-        return _report_payload_from_record(
+        payload = _report_payload_from_record(
             report=report_record,
             candidate_name=candidate.name,
             candidate_email=candidate.email,
             assessment_title=assessment.title,
             submitted_at=candidate.invited_at,
         )
+        payload.setdefault("questionData", question_payload)
+        return payload
 
     submission = _find_latest_submission(settings, candidate.assessment_id)
     assessment_recording = _find_latest_recording(settings, candidate.assessment_id)
@@ -685,4 +739,66 @@ def report(candidate_id: int, settings: Settings = Depends(get_settings)):
         "assessmentRecordingKey": assessment_recording_relative,
         "reflectionRecordingKey": reflection_recording_relative,
         "submittedAt": candidate.invited_at,
+        "status": "processing" if candidate.status == "submitted" else "pending",
+        "questionData": question_payload,
+        "submissionDownloadUrl": f"/api/artifacts/submissions/{candidate.id}",
     }
+
+
+@router.post("/download-submission")
+def download_submission(payload: dict, settings: Settings = Depends(get_settings)):
+    raw_candidate_id = payload.get("candidateId") or payload.get("assessmentId")
+    try:
+        candidate_id = int(str(raw_candidate_id))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Missing candidateId") from exc
+    candidate = get_candidate_by_id(settings, candidate_id)
+    report_record = get_report_by_candidate(settings, candidate_id)
+    if candidate is None or report_record is None:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    submission = _submission_path(settings, report_record.submission_file)
+    if submission is None:
+        submission = _find_latest_submission(settings, candidate.assessment_id)
+    if submission is None:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    return {"downloadUrl": f"/api/artifacts/submissions/{candidate_id}"}
+
+
+@router.get("/api/artifacts/submissions/{candidate_id}")
+def download_submission_artifact(candidate_id: int, settings: Settings = Depends(get_settings)):
+    candidate = get_candidate_by_id(settings, candidate_id)
+    report_record = get_report_by_candidate(settings, candidate_id)
+    if candidate is None or report_record is None:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    submission = _submission_path(settings, report_record.submission_file)
+    if submission is None:
+        submission = _find_latest_submission(settings, candidate.assessment_id)
+    if submission is None:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    safe_name = (candidate.name or "candidate").replace("/", "_").replace("\\", "_").strip() or "candidate"
+    return FileResponse(
+        submission,
+        media_type="application/zip",
+        filename=f"{safe_name}_submission.zip",
+    )
+
+
+@router.get("/api/artifacts/recordings/{candidate_id}/{kind}")
+def recording_artifact(candidate_id: int, kind: str, settings: Settings = Depends(get_settings)):
+    candidate = get_candidate_by_id(settings, candidate_id)
+    report_record = get_report_by_candidate(settings, candidate_id)
+    if candidate is None or report_record is None:
+        raise HTTPException(status_code=404, detail="Recording not found")
+    if kind == "assessment":
+        recording = _recording_path(settings, report_record.assessment_recording_key)
+        if recording is None:
+            recording = _find_latest_recording(settings, candidate.assessment_id)
+    elif kind == "reflection":
+        recording = _recording_path(settings, report_record.reflection_recording_key)
+        if recording is None:
+            recording = _find_latest_reflection(settings, candidate.assessment_id, candidate.email)
+    else:
+        raise HTTPException(status_code=404, detail="Recording not found")
+    if recording is None:
+        raise HTTPException(status_code=404, detail="Recording not found")
+    return FileResponse(recording, media_type="video/webm")

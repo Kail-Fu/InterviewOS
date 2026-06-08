@@ -5,3 +5,4 @@ pydantic-settings==2.10.1
 email-validator==2.2.0
 boto3==1.40.11
 python-multipart==0.0.20
+httpx==0.28.1

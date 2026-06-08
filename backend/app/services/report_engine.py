@@ -7,10 +7,13 @@ from app.core.config import Settings
 from app.services.assessment_store import (
     CandidateRecord,
     get_assessment,
+    get_question,
     get_latest_reflection_key_for_candidate,
     get_report_by_candidate,
+    question_to_payload,
     upsert_report,
 )
+from app.services.grader_client import absolute_path_or_none, grade_with_worker
 from app.services.screen_time_analyzer import analyze_screen_time
 
 
@@ -348,16 +351,50 @@ def run_scoring_and_store_report(settings: Settings, candidate: CandidateRecord)
     reflection = _find_latest_reflection_recording(settings, candidate.assessment_id, candidate.email)
 
     try:
-        base_score, code_quality, checks, summary, diffs = _evaluate_submission(
-            submission=submission,
-            notebook=notebook,
-            assessment_type=assessment_type,
-        )
+        question = get_question(settings, assessment.question_id) if assessment.question_id else None
+        question_payload = question_to_payload(question)
 
-        app_usage = []
-        total_duration = 0
-        if recording is not None:
-            app_usage, total_duration = analyze_screen_time(recording)
+        if settings.report_grader_provider == 'worker':
+            worker_payload = {
+                'candidateId': candidate.id,
+                'assessmentId': candidate.assessment_id,
+                'assessmentType': assessment_type,
+                'submissionFile': recorded_submission_file,
+                'notebookFile': notebook.name if notebook else None,
+                'submissionPath': absolute_path_or_none(submission),
+                'notebookPath': absolute_path_or_none(notebook),
+                'recordingPath': absolute_path_or_none(recording),
+                'reflectionPath': absolute_path_or_none(reflection),
+                'questionData': question_payload,
+            }
+            report_payload = grade_with_worker(settings, worker_payload)
+            checks = list(report_payload.get('results') or [])
+            summary = list(report_payload.get('codeSummaryBullets') or [])
+            diffs = list(report_payload.get('diffs') or [])
+            app_usage = list(report_payload.get('appUsage') or [])
+            total_duration = report_payload.get('totalDuration')
+            final_score = report_payload.get('score')
+            code_quality = report_payload.get('codeQuality')
+            report_error = report_payload.get('error')
+        else:
+            base_score, code_quality, checks, summary, diffs = _evaluate_submission(
+                submission=submission,
+                notebook=notebook,
+                assessment_type=assessment_type,
+            )
+
+            app_usage = []
+            total_duration = 0
+            if recording is not None:
+                app_usage, total_duration = analyze_screen_time(recording)
+
+            final_score = base_score
+            if recording:
+                final_score = min(100, final_score + 5)
+            if reflection:
+                final_score = min(100, final_score + 5)
+            report_error = None
+            report_payload = {}
 
         checks.append(
             {
@@ -376,34 +413,54 @@ def run_scoring_and_store_report(settings: Settings, candidate: CandidateRecord)
             }
         )
 
-        if recording and total_duration > 0:
+        if recording and total_duration:
             summary.append(f'Screen-time analyzer processed recording: {total_duration}s total duration.')
         if notebook is not None and assessment_type == 'assessment4-ner':
             summary.append(f'Assessment4 companion notebook detected: {notebook.name}.')
 
-        final_score = base_score
-        if recording:
-            final_score = min(100, final_score + 5)
-        if reflection:
-            final_score = min(100, final_score + 5)
+        canonical_payload = {
+            **report_payload,
+            'id': candidate.id,
+            'assessmentId': candidate.assessment_id,
+            'assessmentTitle': assessment.title,
+            'name': candidate.name,
+            'email': candidate.email,
+            'score': final_score,
+            'codeQuality': code_quality,
+            'results': checks,
+            'diffs': diffs,
+            'codeSummaryBullets': summary,
+            'reportReady': True,
+            'status': 'ready' if not report_error else 'failed',
+            'error': report_error,
+            'assessmentType': assessment_type,
+            'appUsage': app_usage,
+            'totalDuration': total_duration,
+            'submissionFile': _safe_relative(submission, Path(settings.local_submissions_dir)) if submission else None,
+            'assessmentRecordingKey': _safe_relative(recording, Path(settings.local_recordings_dir)) if recording else None,
+            'reflectionRecordingKey': _safe_relative(reflection, Path(settings.local_recordings_dir)) if reflection else None,
+            'submittedAt': candidate.invited_at,
+            'questionData': question_payload,
+        }
 
         upsert_report(
             settings,
             candidate_id=candidate.id,
             assessment_id=candidate.assessment_id,
-            score=final_score,
-            code_quality=code_quality,
+            score=int(final_score) if isinstance(final_score, (int, float)) else None,
+            code_quality=int(code_quality) if isinstance(code_quality, (int, float)) else None,
             results=checks,
             diffs=diffs,
             code_summary_bullets=summary,
             report_ready=True,
-            error=None,
+            error=str(report_error) if report_error else None,
             assessment_type=assessment_type,
             app_usage=app_usage,
-            total_duration=total_duration,
+            total_duration=int(total_duration) if isinstance(total_duration, (int, float)) else None,
             submission_file=_safe_relative(submission, Path(settings.local_submissions_dir)) if submission else None,
             assessment_recording_key=_safe_relative(recording, Path(settings.local_recordings_dir)) if recording else None,
             reflection_recording_key=_safe_relative(reflection, Path(settings.local_recordings_dir)) if reflection else None,
+            payload=canonical_payload,
         )
     except Exception as exc:
         upsert_report(
@@ -430,4 +487,33 @@ def run_scoring_and_store_report(settings: Settings, candidate: CandidateRecord)
             submission_file=_safe_relative(submission, Path(settings.local_submissions_dir)) if submission else None,
             assessment_recording_key=_safe_relative(recording, Path(settings.local_recordings_dir)) if recording else None,
             reflection_recording_key=_safe_relative(reflection, Path(settings.local_recordings_dir)) if reflection else None,
+            payload={
+                'id': candidate.id,
+                'assessmentId': candidate.assessment_id,
+                'assessmentTitle': assessment.title,
+                'name': candidate.name,
+                'email': candidate.email,
+                'score': 0,
+                'codeQuality': 0,
+                'results': [
+                    {
+                        'name': 'Report generation',
+                        'status': 'fail',
+                        'expected': 'Evaluate submission and produce report payload',
+                        'output': f'Failed with error: {exc}',
+                    }
+                ],
+                'diffs': [],
+                'codeSummaryBullets': ['Report generation failed. Please inspect backend logs.'],
+                'reportReady': True,
+                'status': 'failed',
+                'error': str(exc),
+                'assessmentType': assessment_type,
+                'appUsage': [],
+                'totalDuration': None,
+                'submissionFile': _safe_relative(submission, Path(settings.local_submissions_dir)) if submission else None,
+                'assessmentRecordingKey': _safe_relative(recording, Path(settings.local_recordings_dir)) if recording else None,
+                'reflectionRecordingKey': _safe_relative(reflection, Path(settings.local_recordings_dir)) if reflection else None,
+                'submittedAt': candidate.invited_at,
+            },
         )

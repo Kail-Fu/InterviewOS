@@ -1,0 +1,116 @@
+{
+  "document_kind": "homeowners_declarations",
+  "policy": {
+    "number": "HOM-1234567-89",
+    "type": "Homeowners (HO-3)",
+    "effective_date": "01/01/2025",
+    "expiration_date": "01/01/2026",
+    "insurer": {
+      "name": "ACME INSURANCE COMPANY",
+      "naic": ""
+    },
+    "producer": {
+      "agency_name": "Best Agency LLC",
+      "contact_name": "John Smith",
+      "phone": "(555) 987-6543",
+      "email": ""
+    },
+    "premium_summary": {
+      "total_premium": "$1,310",
+      "fees_and_taxes": "State Surcharge $50, Fire Service Fee $10",
+      "term": "01/01/2025 - 01/01/2026"
+    }
+  },
+  "insureds": [
+    {
+      "name": "Jane Doe",
+      "mailing_address": "123 Maple Avenue\nSpringfield, USA 12345"
+    }
+  ],
+  "locations": [
+    {
+      "address": "123 Maple Avenue\nSpringfield, USA 12345"
+    }
+  ],
+  "coverages": [
+    {
+      "name": "Coverage A – Dwelling",
+      "limit": "$300,000",
+      "aggregate": null,
+      "deductible": "$1,000",
+      "premium": "$800",
+      "notes": null
+    },
+    {
+      "name": "Coverage B – Other Structures",
+      "limit": "$30,000",
+      "aggregate": null,
+      "deductible": "$1,000",
+      "premium": "$50",
+      "notes": null
+    },
+    {
+      "name": "Coverage C – Personal Property",
+      "limit": "$150,000",
+      "aggregate": null,
+      "deductible": "$1,000",
+      "premium": "$300",
+      "notes": null
+    },
+    {
+      "name": "Coverage D – Loss of Use",
+      "limit": "$60,000",
+      "aggregate": null,
+      "deductible": "N/A",
+      "premium": "Included",
+      "notes": null
+    },
+    {
+      "name": "Coverage E – Personal Liability",
+      "limit": "$300,000 Each Occurrence",
+      "aggregate": null,
+      "deductible": "N/A",
+      "premium": "$120",
+      "notes": null
+    },
+    {
+      "name": "Coverage F – Medical Payments",
+      "limit": "$5,000 Each Person",
+      "aggregate": null,
+      "deductible": "N/A",
+      "premium": "$40",
+      "notes": null
+    }
+  ],
+  "deductibles": [
+    {
+      "type": "All Perils",
+      "amount": "$1,000"
+    },
+    {
+      "type": "Wind/Hurricane",
+      "amount": "$2,500"
+    }
+  ],
+  "homeowners": {
+    "dwelling_coverage_a": "$300,000",
+    "other_structures_coverage_b": "$30,000",
+    "personal_property_coverage_c": "$150,000",
+    "loss_of_use_coverage_d": "$60,000",
+    "liability_coverage_e": "$300,000 Each Occurrence",
+    "medical_payments_coverage_f": "$5,000 Each Person",
+    "wind_or_hurricane_deductible": "$2,500",
+    "endorsements": [
+      "HO-15 Special Personal Property Coverage",
+      "HO-23 Assisted Living Care Coverage"
+    ],
+    "mortgagees": [
+      {
+        "name": "First National Bank",
+        "address": "P.O. Box 1000\nSpringfield, USA 12346"
+      }
+    ]
+  },
+  "auto": null,
+  "certificate": null
+}

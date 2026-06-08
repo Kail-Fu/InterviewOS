@@ -7,6 +7,7 @@ from app.services.assessment_store import (
     create_assessment,
     get_assessment,
     get_question,
+    question_to_payload,
     list_assessments,
     list_candidates,
     list_questions,
@@ -68,21 +69,7 @@ def get_assessment_detail(assessment_id: int, settings: Settings = Depends(get_s
         "jobLink": assessment.job_link,
         "jobDesc": assessment.job_desc,
         "assessmentType": assessment.assessment_type,
-        "question": (
-            {
-                "id": question.id,
-                "_id": question.id,
-                "title": question.title,
-                "summary": question.summary,
-                "difficulty": question.difficulty,
-                "role": question.role,
-                "language": question.language,
-                "overview": question.overview,
-                "estimatedTime": question.estimated_time,
-            }
-            if question
-            else None
-        ),
+        "question": question_to_payload(question),
     }
 
 
@@ -132,18 +119,7 @@ def get_question_by_id(question_id: int, settings: Settings = Depends(get_settin
     question = get_question(settings, question_id)
     if question is None:
         raise HTTPException(status_code=404, detail="Question not found")
-    return {
-        "id": question.id,
-        "_id": question.id,
-        "title": question.title,
-        "summary": question.summary,
-        "difficulty": question.difficulty,
-        "role": question.role,
-        "language": question.language,
-        "overview": question.overview,
-        "estimatedTime": question.estimated_time,
-        "assessmentType": question.assessment_type,
-    }
+    return question_to_payload(question)
 
 
 @router.post("/new-assessments")

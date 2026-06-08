@@ -1,0 +1,98 @@
+{
+  "document_kind": "auto_declarations",
+  "policy": {
+    "number": "AUTO-LA-2025-2222",
+    "type": null,
+    "effective_date": "2025-10-01",
+    "expiration_date": "2026-10-01",
+    "insurer": {
+      "name": "PACIFIC AUTO INSURANCE",
+      "naic": ""
+    },
+    "producer": {
+      "agency_name": "LA Choice Brokers",
+      "contact_name": "Sandra Lee",
+      "phone": "(213) 555-9090",
+      "email": ""
+    },
+    "premium_summary": null
+  },
+  "insureds": [
+    {
+      "name": "Michael Johnson",
+      "mailing_address": "77 Sunset Blvd Apt 5, Los Angeles, CA 90028"
+    }
+  ],
+  "locations": [
+    {
+      "address": "77 Sunset Blvd, Los Angeles, CA 90028"
+    }
+  ],
+  "coverages": [
+    {
+      "name": "Bodily Injury",
+      "limit": "$100,000/$300,000",
+      "aggregate": null,
+      "deductible": null,
+      "premium": null,
+      "notes": null
+    },
+    {
+      "name": "Property Damage",
+      "limit": "$100,000",
+      "aggregate": null,
+      "deductible": null,
+      "premium": null,
+      "notes": null
+    },
+    {
+      "name": "Comprehensive",
+      "limit": null,
+      "aggregate": null,
+      "deductible": "$500",
+      "premium": null,
+      "notes": null
+    },
+    {
+      "name": "Collision",
+      "limit": null,
+      "aggregate": null,
+      "deductible": "$1,000",
+      "premium": null,
+      "notes": null
+    }
+  ],
+  "deductibles": null,
+  "homeowners": null,
+  "auto": {
+    "vehicles": [
+      {
+        "year": "2020",
+        "make": "BMW",
+        "model": "X5",
+        "vin": "WBA12345LA2020X5",
+        "garaging_address": "77 Sunset Blvd, Los Angeles, CA",
+        "lienholders": []
+      },
+      {
+        "year": "2019",
+        "make": "Ford",
+        "model": "Explorer",
+        "vin": "1FM5K8D88KGA12345",
+        "garaging_address": "77 Sunset Blvd, Los Angeles, CA",
+        "lienholders": []
+      }
+    ],
+    "drivers": [
+      {
+        "name": "Michael Johnson",
+        "date_of_birth": "1985-04-10"
+      },
+      {
+        "name": "Sarah Johnson",
+        "date_of_birth": "1987-11-22"
+      }
+    ]
+  },
+  "certificate": null
+}

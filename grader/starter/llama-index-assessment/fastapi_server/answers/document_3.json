@@ -1,0 +1,54 @@
+{
+  "document_kind": "certificate_of_insurance",
+  "policy": {
+    "number": "",
+    "type": null,
+    "effective_date": "",
+    "expiration_date": "",
+    "insurer": null,
+    "producer": {
+      "agency_name": "Secure Insurance Brokers LLC",
+      "contact_name": "",
+      "phone": "",
+      "email": ""
+    },
+    "premium_summary": null
+  },
+  "insureds": [
+    {
+      "name": "Acme Construction Inc.",
+      "mailing_address": "789 Industrial Park Rd, Springfield, USA"
+    }
+  ],
+  "locations": null,
+  "coverages": null,
+  "deductibles": null,
+  "homeowners": null,
+  "auto": null,
+  "certificate": {
+    "certificate_holder": "Springfield City Council, 100 Government Plaza, Springfield, USA",
+    "policies": [
+      {
+        "line": "General Liability",
+        "policy_number": "GL-55555",
+        "effective_date": "03/01/2025",
+        "expiration_date": "03/01/2026",
+        "limits_text": "$1,000,000 per occurrence"
+      },
+      {
+        "line": "Auto Liability",
+        "policy_number": "AL-66666",
+        "effective_date": "03/01/2025",
+        "expiration_date": "03/01/2026",
+        "limits_text": "$500,000 combined single limit"
+      },
+      {
+        "line": "Workers Compensation",
+        "policy_number": "WC-77777",
+        "effective_date": "03/01/2025",
+        "expiration_date": "03/01/2026",
+        "limits_text": "Statutory Limits"
+      }
+    ]
+  }
+}
