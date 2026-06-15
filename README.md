@@ -12,7 +12,7 @@
 <p align="center">
   <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="#run-locally-in-one-command"><img alt="Docker" src="https://img.shields.io/badge/docker-required-blue.svg"></a>
-  <img alt="Version" src="https://img.shields.io/badge/version-1.2.0-informational.svg">
+  <img alt="Version" src="https://img.shields.io/badge/version-1.3.0-informational.svg">
 </p>
 
 ---
@@ -148,6 +148,7 @@ This keeps the default local stack light while enabling heavier assessment evalu
   * `POST /get-presigned-upload-url`, `PUT /local-upload/{key}`, `POST /notify-recording-upload`
   * `POST /api/recording/start-multipart-upload`, `POST /api/recording/upload-part`, `POST /api/recording/complete-multipart-upload`
   * `POST /upload-zip`, `POST /download-assessment`
+  * reflection recording now validates captured video bytes before upload and retries the prompt when the browser does not emit usable recording data
 * report experience baseline:
   * report route at `/report/:id` backed by persisted canonical candidate report payloads
   * report API compatibility endpoint: `GET /report/{id}`
@@ -159,6 +160,8 @@ This keeps the default local stack light while enabling heavier assessment evalu
   * candidate completion now lands on a loading screen that polls report readiness and auto-redirects to `/report/:id`
   * assessment4 dual-artifact upload path is supported via `POST /upload-assessment4` (submission zip + notebook)
   * report scoring now uses candidate-scoped submission and reflection artifacts instead of assessment-wide latest files
+  * report artifacts now show all playable reflection recordings per candidate and ignore empty/unplayable local `.webm` uploads
+  * default Users API diffs compare submissions against the actual distributed assessment archive, avoiding false diffs for unchanged starter code
   * report UI now renders score, test evidence, assessment overview, app usage, code diffs, code-quality findings, NER metrics, videos, and submission download actions when present
 * reliability and security hardening:
   * invite supersession and resend behavior are scoped by assessment
@@ -166,6 +169,7 @@ This keeps the default local stack light while enabling heavier assessment evalu
   * multipart recording uploads validate part numbers, reject empty completion, expire abandoned sessions, and clean up stale temp files
   * local reflection uploads require a short-lived invite-validated upload token bound to the generated recording key
   * default local assessment starts resolve to a real assessment id, preventing `/report/default` loading loops
+  * local demo validation errors are rendered as readable messages instead of raw API objects
 * frontend build reproducibility:
   * `frontend/package-lock.json` is committed
   * frontend Docker builds use `npm ci`
@@ -199,6 +203,18 @@ Planned next steps:
 
 ## Version log
 
+### v1.3.0
+
+Focuses on report correctness and candidate-flow reliability:
+
+* fixed reflection artifact reporting so reports display one playable video per reflection prompt instead of collapsing to a single latest recording
+* reject and hide empty local `.webm` reflection uploads so report checks only count playable evidence
+* made camera-only reflection prompts record directly from camera/microphone streams, improving reliability for the second reflection question
+* added retry behavior when the browser fails to emit reflection video data
+* fixed false default-assessment code diffs by comparing against the actual distributed assessment ZIP
+* improved local demo validation messages so API errors render as readable text instead of `[object Object]`
+* added regression coverage for reflection upload grouping and empty-recording filtering
+
 ### v1.2.0
 
 Adds the optional full-report generation path:
@@ -231,7 +247,7 @@ Initial production-ready open-source local workflow: Docker Compose setup, Mailp
 
 ## Status
 
-InterviewOS `v1.2.0` is production-ready for the open-source local workflow. The default stack remains lightweight and local-first; the optional full grader worker enables deeper executable report generation when you need assessment-specific grading.
+InterviewOS `v1.3.0` is production-ready for the open-source local workflow. The default stack remains lightweight and local-first; the optional full grader worker enables deeper executable report generation when you need assessment-specific grading. Candidate recordings, reflection artifacts, and default report diffs have been hardened for more reliable end-to-end local testing.
 
 If you try it and hit sharp edges, please open an issue. Feature requests and PRs are welcome.
 
