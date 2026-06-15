@@ -253,6 +253,7 @@ function Assessment( {company, assessmentId: propAssessmentId, assessmentTitle, 
   const [recording, setRecording] = useState(false);
   const [timeLeft, setTimeLeft] = useState(3600);
   const [recordingFinished, setRecordingFinished] = useState(false);
+  const [recordingUploadError, setRecordingUploadError] = useState('');
   const [downloadReady, setDownloadReady] = useState(false);
   const [showReflectionButton, setShowReflectionButton] = useState(false);
   const [isReflecting, setIsReflecting] = useState(false);
@@ -1085,6 +1086,7 @@ const finalizeSectionRecording = async () => {
       mediaRecorderRef.current.requestData();
       mediaRecorderRef.current.stop();
       setRecordingFinished(true);
+      setRecordingUploadError('');
     }
   
     if (startTime) {
@@ -1125,6 +1127,7 @@ const finalizeSectionRecording = async () => {
 
     setRecording(false);
     setRecordingFinished(false);
+    setRecordingUploadError('');
     setDownloadReady(false);
     setShowReflectionButton(false);
     setIsReflecting(false);
@@ -1204,6 +1207,7 @@ const finalizeSectionRecording = async () => {
       const MIN_PART_SIZE = 10 * 1024 * 1024;
       let partUploadQueue = [];
       let isUploadingPart = false;
+      let uploadFailure = null;
 
       async function processPartQueue() {
         if (isUploadingPart || partUploadQueue.length === 0) return;
@@ -1231,11 +1235,23 @@ const finalizeSectionRecording = async () => {
           });
         } catch (err) {
           console.error(`❌ Part ${partNumber} upload failed:`, err);
+          uploadFailure = err;
         } finally {
           isUploadingPart = false;
           processPartQueue();
         }
       }
+
+      const waitForPartQueueToDrain = () => new Promise((resolve) => {
+        const check = () => {
+          if (!isUploadingPart && partUploadQueue.length === 0) {
+            resolve();
+            return;
+          }
+          setTimeout(check, 100);
+        };
+        check();
+      });
 
       mediaRecorder.ondataavailable = async (e) => {
         const ref = multipartUploadRef.current;
@@ -1287,8 +1303,11 @@ const finalizeSectionRecording = async () => {
             ref.parts.push({ ETag: cleanETag, PartNumber: currentPartNumber });
           } catch (err) {
             console.error(`❌ Final part ${currentPartNumber} upload failed:`, err);
+            uploadFailure = err;
           }
         }
+
+        await waitForPartQueueToDrain();
 
         /* stop local tracks */
         combinedStream.getTracks().forEach(t => t.stop());
@@ -1301,6 +1320,12 @@ const finalizeSectionRecording = async () => {
         console.log('📦 Completing upload', { ...ref, parts: orderedParts });
 
         try {
+          if (uploadFailure) {
+            throw uploadFailure;
+          }
+          if (orderedParts.length === 0) {
+            throw new Error('Recording was too short to upload. Please restart and record for at least a few seconds.');
+          }
           await axios.post(
             `${API_BASE_URL}/api/recording/complete-multipart-upload`,
             {
@@ -1320,13 +1345,23 @@ const finalizeSectionRecording = async () => {
           }, 100);
         } catch (err) {
           console.error('Finalize failed:', err.response?.data || err);
-          alert('Failed to finalize recording upload.');
+          const detail = err?.response?.data?.detail || err?.message || 'Failed to finalize recording upload.';
+          setRecordingUploadError(detail);
+          setRecordingFinished(false);
+          setDownloadReady(false);
+          setShowReflectionButton(false);
+          try {
+            await axios.post(`${API_BASE_URL}/api/recording/abort-upload`, { uploadId: ref.uploadId });
+          } catch (abortErr) {
+            console.warn('Failed to abort recording upload session:', abortErr);
+          }
         }
       };
 
 
-      mediaRecorder.start(5000); // emit every 5s
+      mediaRecorder.start(1000); // emit early so quick stops still produce a final blob
       setRecording(true);
+      setRecordingUploadError('');
       setStartTime(Date.now());
 
       /* Countdown timer */
@@ -1982,6 +2017,23 @@ const finalizeSectionRecording = async () => {
                     <p className="text-amber-600 text-center font-medium mt-2">
                       ⏳ {t.uploadingRecording}
                     </p>
+                  )}
+
+                  {recordingUploadError && (
+                    <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-5 text-left text-red-900">
+                      <p className="font-semibold">Recording upload did not finish.</p>
+                      <p className="mt-2 text-sm">{recordingUploadError}</p>
+                      <p className="mt-2 text-sm">
+                        Please restart the assessment session and record for at least a few seconds before ending.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={resetAssessment}
+                        className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                      >
+                        Restart Assessment
+                      </button>
+                    </div>
                   )}
 
 
