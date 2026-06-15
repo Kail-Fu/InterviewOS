@@ -585,21 +585,49 @@ def get_latest_reflection_key_for_candidate(
     assessment_id: int,
     email: str,
 ) -> str | None:
+    uploads = list_reflection_uploads_for_candidate(
+        settings,
+        assessment_id=assessment_id,
+        email=email,
+    )
+    if not uploads:
+        return None
+    return str(uploads[-1]["s3Key"])
+
+
+def list_reflection_uploads_for_candidate(
+    settings: Settings,
+    *,
+    assessment_id: int,
+    email: str,
+) -> list[dict[str, str | None]]:
     normalized_email = email.strip().lower()
     with _connect(settings) as connection:
-        row = connection.execute(
+        rows = connection.execute(
             """
-            SELECT s3_key
-            FROM reflection_uploads
-            WHERE assessment_id = ? AND lower(email) = lower(?)
-            ORDER BY uploaded_at DESC
-            LIMIT 1
+            SELECT r.section_id, r.s3_key, r.uploaded_at
+            FROM reflection_uploads r
+            INNER JOIN (
+                SELECT COALESCE(section_id, s3_key) AS section_key, MAX(uploaded_at) AS uploaded_at
+                FROM reflection_uploads
+                WHERE assessment_id = ? AND lower(email) = lower(?)
+                GROUP BY COALESCE(section_id, s3_key)
+            ) latest
+                ON COALESCE(r.section_id, r.s3_key) = latest.section_key
+                AND r.uploaded_at = latest.uploaded_at
+            WHERE r.assessment_id = ? AND lower(r.email) = lower(?)
+            ORDER BY r.uploaded_at ASC
             """,
-            (assessment_id, normalized_email),
-        ).fetchone()
-        if row is None:
-            return None
-        return str(row["s3_key"])
+            (assessment_id, normalized_email, assessment_id, normalized_email),
+        ).fetchall()
+        return [
+            {
+                "sectionId": row["section_id"],
+                "s3Key": str(row["s3_key"]),
+                "uploadedAt": row["uploaded_at"],
+            }
+            for row in rows
+        ]
 
 
 def list_questions(settings: Settings) -> list[QuestionRecord]:

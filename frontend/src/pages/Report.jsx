@@ -210,7 +210,16 @@ function AppUsage({ appUsage, totalDuration }) {
 
 function Artifacts({ report }) {
   const assessmentVideoUrl = report.assessmentVideoUrl || (report.assessmentRecordingKey ? `/api/artifacts/recordings/${report.id}/assessment` : '')
-  const reflectionVideoUrl = report.reflectionVideoUrl || (report.reflectionRecordingKey ? `/api/artifacts/recordings/${report.id}/reflection` : '')
+  const reflectionRecordings = asArray(report.reflectionRecordings)
+  const reflectionVideoUrls = reflectionRecordings.length
+    ? reflectionRecordings.map((recording, index) => ({
+        label: recording.sectionId ? `Reflection: ${String(recording.sectionId).replace(/_/g, ' ')}` : `Reflection ${index + 1}`,
+        url: recording.videoUrl || `/api/artifacts/recordings/${report.id}/reflection/${index}`,
+      }))
+    : (report.reflectionVideoUrl || report.reflectionRecordingKey)
+      ? [{ label: 'Reflection Recording', url: report.reflectionVideoUrl || `/api/artifacts/recordings/${report.id}/reflection` }]
+      : []
+  const artifactCount = 1 + Math.max(reflectionVideoUrls.length, 1)
   return (
     <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -222,15 +231,22 @@ function Artifacts({ report }) {
           Download Submission
         </a>
       </div>
-      <div className="mt-5 grid gap-5 md:grid-cols-2">
+      <div className={`mt-5 grid gap-5 ${artifactCount > 2 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
         <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
           <p className="mb-3 text-sm font-semibold text-gray-950">Assessment Recording</p>
           {assessmentVideoUrl ? <video controls className="w-full rounded-xl bg-black" src={apiUrl(assessmentVideoUrl)} /> : <p className="text-sm text-gray-600">No assessment recording found.</p>}
         </div>
-        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-          <p className="mb-3 text-sm font-semibold text-gray-950">Reflection Recording</p>
-          {reflectionVideoUrl ? <video controls className="w-full rounded-xl bg-black" src={apiUrl(reflectionVideoUrl)} /> : <p className="text-sm text-gray-600">No reflection recording found.</p>}
-        </div>
+        {reflectionVideoUrls.length > 0 ? reflectionVideoUrls.map((recording, index) => (
+          <div key={`${recording.url}-${index}`} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <p className="mb-3 text-sm font-semibold capitalize text-gray-950">{recording.label}</p>
+            <video controls className="w-full rounded-xl bg-black" src={apiUrl(recording.url)} />
+          </div>
+        )) : (
+          <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <p className="mb-3 text-sm font-semibold text-gray-950">Reflection Recordings</p>
+            <p className="text-sm text-gray-600">No reflection recording found.</p>
+          </div>
+        )}
       </div>
     </section>
   )

@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 APP_ROOT = Path(__file__).resolve().parents[1]
 STARTER_ROOT = APP_ROOT / "starter"
+ASSETS_ROOT = APP_ROOT / "assets"
 WORKSPACE_ROOT = APP_ROOT / "workspace"
 
 app = FastAPI(title="InterviewOS Grader")
@@ -83,6 +84,8 @@ def iter_files(root: Path, *, include_ext: tuple[str, ...] | None = None) -> lis
     out: list[Path] = []
     for path in root.rglob("*"):
         if any(part in skip_dirs for part in path.parts):
+            continue
+        if path.name == ".DS_Store" or path.name.startswith("._"):
             continue
         if path.is_file() and (include_ext is None or path.suffix.lower() in include_ext):
             out.append(path)
@@ -150,6 +153,16 @@ def generate_diffs(starter: Path, submission: Path, limit: int = 20) -> list[dic
         if len(diffs) >= limit:
             break
     return diffs
+
+
+def default_starter_baseline(workspace: Path) -> Path:
+    distributed_zip = ASSETS_ROOT / "example_assessment.zip"
+    if distributed_zip.is_file():
+        try:
+            return safe_extract(distributed_zip, workspace / "distributed-starter")
+        except Exception:
+            pass
+    return STARTER_ROOT / "assessment"
 
 
 def analyze_screen(recording_path: str | None) -> tuple[list[dict[str, Any]], int, list[str]]:
@@ -232,7 +245,7 @@ def structural_similarity(expected: Any, actual: Any) -> int:
     return round(difflib.SequenceMatcher(None, expected_s, actual_s).ratio() * 100)
 
 
-def users_api_eval(submission: Path) -> dict[str, Any]:
+def users_api_eval(submission: Path, starter: Path | None = None) -> dict[str, Any]:
     server_path = find_file(submission, "server.js", "users-service") or find_file(submission, "server.js")
     if server_path is None:
         return fail_report("server.js not found in submitted Users API project", "default")
@@ -278,7 +291,7 @@ def users_api_eval(submission: Path) -> dict[str, Any]:
         "score": score,
         "codeQuality": code_quality,
         "results": results,
-        "diffs": generate_diffs(STARTER_ROOT / "assessment", submission),
+        "diffs": generate_diffs(starter or STARTER_ROOT / "assessment", submission),
         "codeSummaryBullets": ["Users API grader executed endpoint tests.", f"{passed}/{len(results)} checks passed."],
         "eslintIssues": eslint_issues,
         "eslintAnalysis": eslint_analysis,
@@ -449,7 +462,7 @@ def grade(payload: GradeRequest) -> dict[str, Any]:
         elif assessment_type == "assessment4-ner":
             report = external_autograder(APP_ROOT / "assessment4" / "assessment4_autograder.py", submission, assessment_type)
         else:
-            report = users_api_eval(submission)
+            report = users_api_eval(submission, default_starter_baseline(workspace))
         app_usage, duration, screen_warnings = analyze_screen(payload.recordingPath)
         warnings.extend(screen_warnings)
         report.setdefault("appUsage", app_usage)

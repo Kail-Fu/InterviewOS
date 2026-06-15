@@ -8,7 +8,7 @@ from app.services.assessment_store import (
     CandidateRecord,
     get_assessment,
     get_question,
-    get_latest_reflection_key_for_candidate,
+    list_reflection_uploads_for_candidate,
     get_report_by_candidate,
     question_to_payload,
     upsert_report,
@@ -98,26 +98,60 @@ def _find_latest_reflection_recording(
     assessment_id: int,
     candidate_email: str,
 ) -> Path | None:
-    reflection_key = get_latest_reflection_key_for_candidate(
+    recordings = _find_reflection_recordings(settings, assessment_id, candidate_email)
+    return recordings[-1] if recordings else None
+
+
+def _find_reflection_recordings(
+    settings: Settings,
+    assessment_id: int,
+    candidate_email: str,
+) -> list[Path]:
+    uploads = list_reflection_uploads_for_candidate(
         settings,
         assessment_id=assessment_id,
         email=candidate_email,
     )
-    if reflection_key:
-        candidate_reflection = Path(settings.local_recordings_dir) / _safe_key(reflection_key)
+    recordings: list[Path] = []
+    for upload in uploads:
+        candidate_reflection = Path(settings.local_recordings_dir) / _safe_key(str(upload.get("s3Key") or ""))
         if candidate_reflection.is_file():
-            return candidate_reflection
+            recordings.append(candidate_reflection)
+    if recordings:
+        return recordings
 
     root = Path(settings.local_recordings_dir) / 'reflection' / str(assessment_id)
     if not root.exists():
-        return None
+        return []
 
     # Legacy fallback (before reflection uploads were candidate-attributed):
     # only use a reflection recording when there is a single possible file.
     matches = [p for p in root.rglob('*.webm') if p.is_file()]
     if len(matches) != 1:
-        return None
-    return matches[0]
+        return []
+    return matches
+
+
+def _reflection_payload(settings: Settings, assessment_id: int, candidate_email: str) -> list[dict[str, str | None]]:
+    uploads = list_reflection_uploads_for_candidate(
+        settings,
+        assessment_id=assessment_id,
+        email=candidate_email,
+    )
+    payload: list[dict[str, str | None]] = []
+    for upload in uploads:
+        key = str(upload.get("s3Key") or "")
+        path = Path(settings.local_recordings_dir) / _safe_key(key)
+        if not key or not path.is_file():
+            continue
+        payload.append(
+            {
+                "sectionId": upload.get("sectionId"),
+                "s3Key": _safe_relative(path, Path(settings.local_recordings_dir)),
+                "uploadedAt": upload.get("uploadedAt"),
+            }
+        )
+    return payload
 
 
 def _detect_assessment_type(assessment_type: str | None) -> str:
@@ -172,17 +206,6 @@ def _evaluate_submission(
             has_users_api_marker = any('users-service' in n.lower() or 'server.js' in n.lower() for n in names)
             has_retrieval_marker = any('retriev' in n.lower() or 'vector' in n.lower() for n in names)
             has_llama_marker = any('llama' in n.lower() or 'document' in n.lower() for n in names)
-            code_files = [n for n in names if n.endswith(('.py', '.js', '.ts', '.java', '.ipynb', '.json'))]
-
-        for entry in code_files[:8]:
-            diffs.append(
-                {
-                    'path': entry,
-                    'status': 'modified',
-                    'modified': f'Submission artifact includes {entry}',
-                }
-            )
-
         archive_checks.append(
             {
                 'name': 'Submission ZIP received',
@@ -348,7 +371,9 @@ def run_scoring_and_store_report(settings: Settings, candidate: CandidateRecord)
         recorded_submission_file,
     )
     recording = _find_latest_assessment_recording(settings, candidate.assessment_id)
-    reflection = _find_latest_reflection_recording(settings, candidate.assessment_id, candidate.email)
+    reflection_recordings = _find_reflection_recordings(settings, candidate.assessment_id, candidate.email)
+    reflection = reflection_recordings[-1] if reflection_recordings else None
+    reflection_payload = _reflection_payload(settings, candidate.assessment_id, candidate.email)
 
     try:
         question = get_question(settings, assessment.question_id) if assessment.question_id else None
@@ -406,10 +431,10 @@ def run_scoring_and_store_report(settings: Settings, candidate: CandidateRecord)
         )
         checks.append(
             {
-                'name': 'Reflection recording',
-                'status': 'pass' if reflection else 'partial',
-                'expected': 'Upload reflection response recording',
-                'output': reflection.name if reflection else 'No reflection recording found',
+                'name': 'Reflection recordings',
+                'status': 'pass' if reflection_recordings else 'partial',
+                'expected': 'Upload one recording for each reflection prompt',
+                'output': f'{len(reflection_recordings)} reflection recording(s) found' if reflection_recordings else 'No reflection recording found',
             }
         )
 
@@ -439,6 +464,7 @@ def run_scoring_and_store_report(settings: Settings, candidate: CandidateRecord)
             'submissionFile': _safe_relative(submission, Path(settings.local_submissions_dir)) if submission else None,
             'assessmentRecordingKey': _safe_relative(recording, Path(settings.local_recordings_dir)) if recording else None,
             'reflectionRecordingKey': _safe_relative(reflection, Path(settings.local_recordings_dir)) if reflection else None,
+            'reflectionRecordings': reflection_payload,
             'submittedAt': candidate.invited_at,
             'questionData': question_payload,
         }

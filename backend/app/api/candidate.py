@@ -17,7 +17,7 @@ from app.services.assessment_store import (
     get_default_assessment,
     get_question,
     get_latest_candidate_by_assessment,
-    get_latest_reflection_key_for_candidate,
+    list_reflection_uploads_for_candidate,
     get_latest_report_by_assessment,
     get_candidate_by_id,
     get_report_by_candidate,
@@ -182,27 +182,58 @@ def _find_latest_recording(settings: Settings, assessment_id: int) -> Path | Non
     return max(candidates, key=lambda path: path.stat().st_mtime)
 
 
-def _find_latest_reflection(settings: Settings, assessment_id: int, email: str) -> Path | None:
-    reflection_key = get_latest_reflection_key_for_candidate(
+def _find_reflections(settings: Settings, assessment_id: int, email: str) -> list[Path]:
+    uploads = list_reflection_uploads_for_candidate(
         settings,
         assessment_id=assessment_id,
         email=email,
     )
-    if reflection_key:
-        candidate_reflection = Path(settings.local_recordings_dir) / _safe_key(reflection_key)
+    reflections: list[Path] = []
+    for upload in uploads:
+        candidate_reflection = Path(settings.local_recordings_dir) / _safe_key(str(upload.get("s3Key") or ""))
         if candidate_reflection.is_file():
-            return candidate_reflection
+            reflections.append(candidate_reflection)
+    if reflections:
+        return reflections
 
     root = Path(settings.local_recordings_dir) / "reflection" / str(assessment_id)
     if not root.exists():
-        return None
+        return []
 
     # Legacy fallback (before reflection uploads were candidate-attributed):
     # only return a recording when the folder is unambiguous.
     candidates = [path for path in root.rglob("*.webm") if path.is_file()]
     if len(candidates) != 1:
-        return None
-    return candidates[0]
+        return []
+    return candidates
+
+
+def _find_latest_reflection(settings: Settings, assessment_id: int, email: str) -> Path | None:
+    reflections = _find_reflections(settings, assessment_id, email)
+    return reflections[-1] if reflections else None
+
+
+def _reflection_payload_for_candidate(settings: Settings, candidate_id: int, assessment_id: int, email: str) -> list[dict[str, object]]:
+    uploads = list_reflection_uploads_for_candidate(
+        settings,
+        assessment_id=assessment_id,
+        email=email,
+    )
+    payload: list[dict[str, object]] = []
+    for upload in uploads:
+        key = str(upload.get("s3Key") or "")
+        path = Path(settings.local_recordings_dir) / _safe_key(key)
+        if not key or not path.is_file():
+            continue
+        payload.append(
+            {
+                "sectionId": upload.get("sectionId"),
+                "s3Key": str(path.relative_to(Path(settings.local_recordings_dir))),
+                "uploadedAt": upload.get("uploadedAt"),
+                "videoUrl": f"/api/artifacts/recordings/{candidate_id}/reflection/{len(payload)}",
+            }
+        )
+    return payload
 
 
 def _report_payload_from_record(
@@ -239,6 +270,20 @@ def _report_payload_from_record(
     payload["submissionDownloadUrl"] = f"/api/artifacts/submissions/{report.candidate_id}"
     if report.assessment_recording_key:
         payload["assessmentVideoUrl"] = f"/api/artifacts/recordings/{report.candidate_id}/assessment"
+    reflection_recordings = payload.get("reflectionRecordings")
+    if not isinstance(reflection_recordings, list):
+        reflection_recordings = []
+    if not reflection_recordings and report.reflection_recording_key:
+        reflection_recordings = [{"sectionId": None, "s3Key": report.reflection_recording_key}]
+    normalized_reflections: list[dict[str, object]] = []
+    for index, reflection in enumerate(reflection_recordings):
+        if not isinstance(reflection, dict):
+            continue
+        item = dict(reflection)
+        item["videoUrl"] = f"/api/artifacts/recordings/{report.candidate_id}/reflection/{index}"
+        normalized_reflections.append(item)
+    payload["reflectionRecordings"] = normalized_reflections
+    payload["reflectionVideoUrls"] = [item["videoUrl"] for item in normalized_reflections]
     if report.reflection_recording_key:
         payload["reflectionVideoUrl"] = f"/api/artifacts/recordings/{report.candidate_id}/reflection"
     return payload
@@ -657,15 +702,25 @@ def report(candidate_id: int, settings: Settings = Depends(get_settings)):
             submitted_at=candidate.invited_at,
         )
         payload.setdefault("questionData", question_payload)
+        reflection_payload = _reflection_payload_for_candidate(
+            settings,
+            candidate.id,
+            candidate.assessment_id,
+            candidate.email,
+        )
+        if reflection_payload:
+            payload["reflectionRecordings"] = reflection_payload
+            payload["reflectionVideoUrls"] = [item["videoUrl"] for item in reflection_payload]
         return payload
 
     submission = _find_latest_submission(settings, candidate.assessment_id)
     assessment_recording = _find_latest_recording(settings, candidate.assessment_id)
-    reflection_recording = _find_latest_reflection(settings, candidate.assessment_id, candidate.email)
+    reflection_recordings = _find_reflections(settings, candidate.assessment_id, candidate.email)
+    reflection_recording = reflection_recordings[-1] if reflection_recordings else None
 
     has_submission = submission is not None
     has_assessment_recording = assessment_recording is not None
-    has_reflection_recording = reflection_recording is not None
+    has_reflection_recording = bool(reflection_recordings)
     submission_relative = (
         str(submission.relative_to(Path(settings.local_submissions_dir))) if submission else None
     )
@@ -713,12 +768,12 @@ def report(candidate_id: int, settings: Settings = Depends(get_settings)):
             ),
         },
         {
-            "name": "Reflection recording",
+            "name": "Reflection recordings",
             "status": "pass" if has_reflection_recording else "partial",
             "expected": "Upload reflection response recording(s)",
             "output": (
-                f"Found {reflection_recording.name}"
-                if reflection_recording
+                f"{len(reflection_recordings)} reflection recording(s) found"
+                if reflection_recordings
                 else "No reflection recording found"
             ),
         },
@@ -751,6 +806,12 @@ def report(candidate_id: int, settings: Settings = Depends(get_settings)):
         "submissionFile": submission_relative,
         "assessmentRecordingKey": assessment_recording_relative,
         "reflectionRecordingKey": reflection_recording_relative,
+        "reflectionRecordings": _reflection_payload_for_candidate(
+            settings,
+            candidate.id,
+            candidate.assessment_id,
+            candidate.email,
+        ),
         "submittedAt": candidate.invited_at,
         "status": "processing" if candidate.status == "submitted" else "pending",
         "questionData": question_payload,
@@ -796,6 +857,17 @@ def download_submission_artifact(candidate_id: int, settings: Settings = Depends
     )
 
 
+@router.get("/api/artifacts/recordings/{candidate_id}/reflection/{index}")
+def reflection_recording_artifact(candidate_id: int, index: int, settings: Settings = Depends(get_settings)):
+    candidate = get_candidate_by_id(settings, candidate_id)
+    if candidate is None:
+        raise HTTPException(status_code=404, detail="Recording not found")
+    recordings = _find_reflections(settings, candidate.assessment_id, candidate.email)
+    if index < 0 or index >= len(recordings):
+        raise HTTPException(status_code=404, detail="Recording not found")
+    return FileResponse(recordings[index], media_type="video/webm")
+
+
 @router.get("/api/artifacts/recordings/{candidate_id}/{kind}")
 def recording_artifact(candidate_id: int, kind: str, settings: Settings = Depends(get_settings)):
     candidate = get_candidate_by_id(settings, candidate_id)
@@ -807,7 +879,10 @@ def recording_artifact(candidate_id: int, kind: str, settings: Settings = Depend
         if recording is None:
             recording = _find_latest_recording(settings, candidate.assessment_id)
     elif kind == "reflection":
-        recording = _recording_path(settings, report_record.reflection_recording_key)
+        reflection_recordings = _find_reflections(settings, candidate.assessment_id, candidate.email)
+        recording = reflection_recordings[-1] if reflection_recordings else None
+        if recording is None:
+            recording = _recording_path(settings, report_record.reflection_recording_key)
         if recording is None:
             recording = _find_latest_reflection(settings, candidate.assessment_id, candidate.email)
     else:

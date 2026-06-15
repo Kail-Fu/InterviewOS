@@ -58,6 +58,7 @@ services:
     ports:
       - "9000:9000"
     volumes:
+      - ./backend/assets:/app/assets:ro
       - ./backend/submissions:/app/submissions
       - ./backend/recordings:/app/recordings
       - ./grader/workspace:/app/workspace

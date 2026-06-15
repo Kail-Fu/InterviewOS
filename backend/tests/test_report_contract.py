@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
 from app.core.config import Settings
 from app.services.assessment_store import (
     init_assessment_store,
+    list_reflection_uploads_for_candidate,
     list_questions,
     question_to_payload,
+    record_reflection_upload,
     upsert_report,
     get_report_by_candidate,
 )
@@ -68,6 +71,45 @@ class ReportContractTests(unittest.TestCase):
         self.assertEqual(_detect_assessment_type("assessment4-ner"), "assessment4-ner")
         self.assertEqual(_detect_assessment_type("json-comparison"), "json-comparison")
         self.assertEqual(_detect_assessment_type("unexpected"), "default")
+
+    def test_reflection_uploads_keep_latest_per_section(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            settings = self.make_settings(Path(tmp))
+            init_assessment_store(settings)
+            record_reflection_upload(
+                settings,
+                assessment_id=1,
+                email="candidate@example.com",
+                section_id="demo_work",
+                s3_key="reflection/1/old-demo.webm",
+            )
+            time.sleep(0.001)
+            record_reflection_upload(
+                settings,
+                assessment_id=1,
+                email="candidate@example.com",
+                section_id="demo_work",
+                s3_key="reflection/1/new-demo.webm",
+            )
+            time.sleep(0.001)
+            record_reflection_upload(
+                settings,
+                assessment_id=1,
+                email="candidate@example.com",
+                section_id="struggles",
+                s3_key="reflection/1/struggles.webm",
+            )
+
+            uploads = list_reflection_uploads_for_candidate(
+                settings,
+                assessment_id=1,
+                email="candidate@example.com",
+            )
+
+            self.assertEqual([upload["s3Key"] for upload in uploads], [
+                "reflection/1/new-demo.webm",
+                "reflection/1/struggles.webm",
+            ])
 
 
 if __name__ == "__main__":
