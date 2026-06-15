@@ -28,6 +28,13 @@ def _safe_relative(path: Path, base: Path) -> str | None:
         return None
 
 
+def _is_playable_recording(path: Path) -> bool:
+    try:
+        return path.is_file() and path.stat().st_size > 0
+    except OSError:
+        return False
+
+
 def _submission_path(settings: Settings, assessment_id: int, submission_file: str | None) -> Path | None:
     if not submission_file:
         return None
@@ -87,7 +94,7 @@ def _find_latest_assessment_recording(settings: Settings, assessment_id: int) ->
     root = Path(settings.local_recordings_dir) / 'recordings'
     if not root.exists():
         return None
-    matches = [p for p in root.glob(f'assessment-{assessment_id}-*.webm') if p.is_file()]
+    matches = [p for p in root.glob(f'assessment-{assessment_id}-*.webm') if _is_playable_recording(p)]
     if not matches:
         return None
     return max(matches, key=lambda p: p.stat().st_mtime)
@@ -115,7 +122,7 @@ def _find_reflection_recordings(
     recordings: list[Path] = []
     for upload in uploads:
         candidate_reflection = Path(settings.local_recordings_dir) / _safe_key(str(upload.get("s3Key") or ""))
-        if candidate_reflection.is_file():
+        if _is_playable_recording(candidate_reflection):
             recordings.append(candidate_reflection)
     if recordings:
         return recordings
@@ -126,7 +133,7 @@ def _find_reflection_recordings(
 
     # Legacy fallback (before reflection uploads were candidate-attributed):
     # only use a reflection recording when there is a single possible file.
-    matches = [p for p in root.rglob('*.webm') if p.is_file()]
+    matches = [p for p in root.rglob('*.webm') if _is_playable_recording(p)]
     if len(matches) != 1:
         return []
     return matches
@@ -142,7 +149,7 @@ def _reflection_payload(settings: Settings, assessment_id: int, candidate_email:
     for upload in uploads:
         key = str(upload.get("s3Key") or "")
         path = Path(settings.local_recordings_dir) / _safe_key(key)
-        if not key or not path.is_file():
+        if not key or not _is_playable_recording(path):
             continue
         payload.append(
             {

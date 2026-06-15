@@ -165,7 +165,14 @@ def _recording_path(settings: Settings, key: str | None) -> Path | None:
         path.relative_to(root)
     except ValueError:
         return None
-    return path if path.is_file() else None
+    return path if _is_playable_recording(path) else None
+
+
+def _is_playable_recording(path: Path) -> bool:
+    try:
+        return path.is_file() and path.stat().st_size > 0
+    except OSError:
+        return False
 
 
 def _find_latest_recording(settings: Settings, assessment_id: int) -> Path | None:
@@ -175,7 +182,7 @@ def _find_latest_recording(settings: Settings, assessment_id: int) -> Path | Non
     candidates = [
         path
         for path in root.glob(f"assessment-{assessment_id}-*.webm")
-        if path.is_file()
+        if _is_playable_recording(path)
     ]
     if not candidates:
         return None
@@ -191,7 +198,7 @@ def _find_reflections(settings: Settings, assessment_id: int, email: str) -> lis
     reflections: list[Path] = []
     for upload in uploads:
         candidate_reflection = Path(settings.local_recordings_dir) / _safe_key(str(upload.get("s3Key") or ""))
-        if candidate_reflection.is_file():
+        if _is_playable_recording(candidate_reflection):
             reflections.append(candidate_reflection)
     if reflections:
         return reflections
@@ -202,7 +209,7 @@ def _find_reflections(settings: Settings, assessment_id: int, email: str) -> lis
 
     # Legacy fallback (before reflection uploads were candidate-attributed):
     # only return a recording when the folder is unambiguous.
-    candidates = [path for path in root.rglob("*.webm") if path.is_file()]
+    candidates = [path for path in root.rglob("*.webm") if _is_playable_recording(path)]
     if len(candidates) != 1:
         return []
     return candidates
@@ -223,7 +230,7 @@ def _reflection_payload_for_candidate(settings: Settings, candidate_id: int, ass
     for upload in uploads:
         key = str(upload.get("s3Key") or "")
         path = Path(settings.local_recordings_dir) / _safe_key(key)
-        if not key or not path.is_file():
+        if not key or not _is_playable_recording(path):
             continue
         payload.append(
             {
@@ -445,6 +452,8 @@ async def local_upload_put(key: str, request: Request, settings: Settings = Depe
     dest = _recordings_destination(settings, safe_key)
     dest.parent.mkdir(parents=True, exist_ok=True)
     body = await request.body()
+    if len(body) == 0:
+        raise HTTPException(status_code=400, detail="Upload is empty")
     if len(body) > _LOCAL_UPLOAD_MAX_BYTES:
         raise HTTPException(status_code=413, detail="Upload too large")
     dest.write_bytes(body)

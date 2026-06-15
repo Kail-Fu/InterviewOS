@@ -15,7 +15,7 @@ from app.services.assessment_store import (
     upsert_report,
     get_report_by_candidate,
 )
-from app.services.report_engine import _detect_assessment_type
+from app.services.report_engine import _detect_assessment_type, _reflection_payload
 
 
 class ReportContractTests(unittest.TestCase):
@@ -110,6 +110,39 @@ class ReportContractTests(unittest.TestCase):
                 "reflection/1/new-demo.webm",
                 "reflection/1/struggles.webm",
             ])
+
+    def test_reflection_payload_ignores_empty_recordings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            settings = self.make_settings(root)
+            init_assessment_store(settings)
+            recordings_root = root / "recordings"
+            good = recordings_root / "reflection/1/demo_work-good.webm"
+            empty = recordings_root / "reflection/1/struggles-empty.webm"
+            good.parent.mkdir(parents=True, exist_ok=True)
+            good.write_bytes(b"webm-data")
+            empty.write_bytes(b"")
+
+            record_reflection_upload(
+                settings,
+                assessment_id=1,
+                email="candidate@example.com",
+                section_id="demo_work",
+                s3_key="reflection/1/demo_work-good.webm",
+            )
+            record_reflection_upload(
+                settings,
+                assessment_id=1,
+                email="candidate@example.com",
+                section_id="struggles",
+                s3_key="reflection/1/struggles-empty.webm",
+            )
+
+            payload = _reflection_payload(settings, 1, "candidate@example.com")
+
+            self.assertEqual(len(payload), 1)
+            self.assertEqual(payload[0]["sectionId"], "demo_work")
+            self.assertEqual(payload[0]["s3Key"], "reflection/1/demo_work-good.webm")
 
 
 if __name__ == "__main__":

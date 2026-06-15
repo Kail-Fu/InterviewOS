@@ -576,6 +576,11 @@ function Assessment( {company, assessmentId: propAssessmentId, assessmentTitle, 
   }, []);
 
   const uploadSectionRecording = async (blob, sectionId) => {
+    if (!blob || blob.size === 0) {
+      alert('No reflection video data was captured. Please record for at least a few seconds and try again.');
+      return false;
+    }
+
     setIsUploadingReflection(true);
     const file = new File([blob], `reflection-${sectionId}.webm`, { type: 'video/webm' });
     let presigned;
@@ -685,26 +690,24 @@ const finalizeSectionRecording = async () => {
 
         rec.onstop = finish;
 
-        // If ending *very* quickly, we may still have 0 chunks. Try to pull one.
-        const hadNoChunks = allSectionChunksRef.current.length === 0;
-
         try { rec.requestData?.(); } catch (e) { /* noop */ }
-
-        // If we had no chunks yet, give the browser a brief moment to emit dataavailable
-        const delay = hadNoChunks ? 300 : 0;
 
         setTimeout(() => {
           // one more nudge just in case
           try { rec.requestData?.(); } catch (e) { /* noop */ }
           try { rec.stop(); } catch (e) { finish(); }
-        }, delay);
+        }, 300);
       });
     }
 
 
 
-    // (optional) brief micro-wait to ensure the final dataavailable landed
-    await new Promise(r => setTimeout(r, 50));
+    // Wait for the final dataavailable event. Chrome can emit it just after stop,
+    // especially for very short recordings.
+    const waitStartedAt = Date.now();
+    while (allSectionChunksRef.current.length === 0 && Date.now() - waitStartedAt < 1500) {
+      await new Promise(r => setTimeout(r, 100));
+    }
 
     // create blob from chunks
     const sectionBlob = new Blob(allSectionChunksRef.current, { type: 'video/webm' });
@@ -882,6 +885,31 @@ const finalizeSectionRecording = async () => {
       }
     } else {
       console.error('[FRONTEND] Upload failed, not proceeding to next section');
+      setIsUploadingReflection(false);
+      setIsReflecting(false);
+      setIsPreparingReflection(true);
+      setPrepTimeLeft(5);
+      allSectionChunksRef.current = [];
+      sectionRecorderRef.current = null;
+      activeSectionIdRef.current = null;
+      isStartingSectionRef.current = false;
+
+      if (reflectionPrepTimerRef.current) {
+        clearInterval(reflectionPrepTimerRef.current);
+      }
+
+      reflectionPrepTimerRef.current = setInterval(() => {
+        setPrepTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(reflectionPrepTimerRef.current);
+            reflectionPrepTimerRef.current = null;
+            setIsPreparingReflection(false);
+            startReflectionRecording();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
   } catch (error) {
     console.error('[FRONTEND] Error in finalizeSectionRecording:', error);
