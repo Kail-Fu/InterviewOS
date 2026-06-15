@@ -14,6 +14,7 @@ from app.services.assessment import generate_assessment_download_link
 from app.services.assessment_store import (
     ReportRecord,
     get_assessment,
+    get_default_assessment,
     get_question,
     get_latest_candidate_by_assessment,
     get_latest_reflection_key_for_candidate,
@@ -107,6 +108,22 @@ def _consume_local_upload_token(token: str | None, key: str) -> None:
         raise HTTPException(status_code=403, detail="Invalid or expired upload token")
     if session.get("key") != _safe_key(key):
         raise HTTPException(status_code=403, detail="Upload token does not match key")
+
+
+def _resolve_assessment_id(raw_assessment_id: object, settings: Settings) -> int:
+    raw = str(raw_assessment_id or "").strip()
+    if not raw or raw == "default":
+        assessment = get_default_assessment(settings)
+        if assessment is None:
+            raise HTTPException(status_code=404, detail="Assessment not found")
+        return assessment.id
+    try:
+        assessment_id = int(raw)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid assessmentId") from exc
+    if get_assessment(settings, assessment_id) is None:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    return assessment_id
 
 
 def _iso_utc(ts: float) -> str:
@@ -299,7 +316,10 @@ def _upload_response_payload(
 @router.get("/api/public/assessment/{assessment_id}")
 def public_assessment(assessment_id: str, settings: Settings = Depends(get_settings)):
     if assessment_id == "default":
-        return {"id": "default", "title": "Default Assessment"}
+        assessment = get_default_assessment(settings)
+        if assessment is None:
+            return {"id": "default", "title": "Default Assessment"}
+        return {"id": assessment.id, "title": assessment.title}
     try:
         numeric_id = int(assessment_id)
     except ValueError as exc:
@@ -348,16 +368,14 @@ def get_presigned_upload_url(
     settings: Settings = Depends(get_settings),
 ):
     file_name = _safe_key(str(payload.get("fileName", "upload.bin")))
-    raw_assessment_id = str(payload.get("assessmentId", "")).strip()
     invite_token = str(payload.get("inviteToken", "")).strip()
-    try:
-        assessment_id = int(raw_assessment_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Invalid assessmentId") from exc
-    if get_assessment(settings, assessment_id) is None:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    assessment_id = _resolve_assessment_id(payload.get("assessmentId"), settings)
     invite = get_invite_by_token(invite_token, settings)
-    if invite is None or invite.assessment_id != assessment_id or invite.status not in {"invited", "resent", "taken"}:
+    if (
+        invite is None
+        or (invite.assessment_id is not None and invite.assessment_id != assessment_id)
+        or invite.status not in {"invited", "resent", "taken"}
+    ):
         raise HTTPException(status_code=403, detail="Invalid invite token")
 
     section_id = _safe_key(str(payload.get("sectionId", "section")))
@@ -398,12 +416,7 @@ def notify_recording_upload(payload: dict, settings: Settings = Depends(get_sett
         section_id = payload.get("sectionId")
         if not s3_key or not email:
             raise HTTPException(status_code=400, detail="Missing reflection upload metadata")
-        try:
-            assessment_id = int(str(raw_assessment_id))
-        except (TypeError, ValueError) as exc:
-            raise HTTPException(status_code=400, detail="Invalid assessmentId for reflection upload") from exc
-        if get_assessment(settings, assessment_id) is None:
-            raise HTTPException(status_code=404, detail="Assessment not found")
+        assessment_id = _resolve_assessment_id(raw_assessment_id, settings)
         record_reflection_upload(
             settings,
             assessment_id=assessment_id,

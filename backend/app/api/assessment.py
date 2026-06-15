@@ -21,6 +21,16 @@ class StartAssessmentRequest(BaseModel):
     assessmentId: int | str | None = None
 
 
+def _resolve_start_assessment(payload: StartAssessmentRequest, settings: Settings):
+    assessment_id = payload.assessmentId
+    if assessment_id is None or str(assessment_id).strip() == "default":
+        return get_default_assessment(settings)
+    try:
+        return get_assessment(settings, int(str(assessment_id)))
+    except ValueError:
+        return None
+
+
 @router.post("/start")
 async def start_assessment(
     payload: StartAssessmentRequest,
@@ -28,23 +38,9 @@ async def start_assessment(
     settings: Settings = Depends(get_settings),
 ):
     if payload.name:
-        assessment_id = payload.assessmentId
-        assessment_type = "default"
-        if assessment_id is None:
-            assessment = get_default_assessment(settings)
-            if assessment is not None:
-                assessment_id = assessment.id
-                assessment_type = assessment.assessment_type
-            else:
-                assessment_id = "default"
-        else:
-            try:
-                numeric_assessment_id = int(str(assessment_id))
-                assessment = get_assessment(settings, numeric_assessment_id)
-                if assessment is not None:
-                    assessment_type = assessment.assessment_type
-            except ValueError:
-                pass
+        assessment = _resolve_start_assessment(payload, settings)
+        assessment_id = assessment.id if assessment is not None else "default"
+        assessment_type = assessment.assessment_type if assessment is not None else "default"
         return {
             "downloadUrl": generate_assessment_download_link(settings),
             "assessmentId": assessment_id,
