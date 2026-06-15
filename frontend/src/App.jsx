@@ -12,6 +12,25 @@ function apiUrl(path) {
   return `${API_BASE_URL.replace(/\/$/, '')}${path}`
 }
 
+function errorMessageFromPayload(payload, fallback = 'Request failed') {
+  const detail = payload?.detail || payload?.error || payload?.message
+  if (!detail) return fallback
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === 'string') return item
+        const location = Array.isArray(item?.loc) ? item.loc.filter((part) => part !== 'body').join('.') : ''
+        const message = item?.msg || item?.message
+        return [location, message].filter(Boolean).join(': ')
+      })
+      .filter(Boolean)
+      .join(' ')
+      || fallback
+  }
+  return fallback
+}
+
 export default function App() {
   const path = typeof window !== 'undefined' ? window.location.pathname : '/'
   const assessmentResultMatch = path.match(/^\/assessment_result\/(\d+)$/)
@@ -76,7 +95,7 @@ function StartAssessmentPage() {
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}))
-        throw new Error(payload.detail || 'Request failed')
+        throw new Error(errorMessageFromPayload(payload, 'Failed to send assessment'))
       }
 
       setSuccess('Assessment sent. Check backend logs or your inbox provider.')

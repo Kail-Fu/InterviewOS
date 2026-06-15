@@ -450,6 +450,15 @@ function Assessment( {company, assessmentId: propAssessmentId, assessmentTitle, 
     return reflectionCanvasRef.current.captureStream(30);
   }
 
+  function getSupportedWebmMimeType() {
+    const candidates = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+    ];
+    return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || '';
+  }
+
   // switch stream source without stopping main recorder
   async function switchStreamSource(newStream, newMode) {
     console.log(`[FRONTEND] Switching stream source to ${newMode}`);
@@ -577,7 +586,7 @@ function Assessment( {company, assessmentId: propAssessmentId, assessmentTitle, 
 
   const uploadSectionRecording = async (blob, sectionId) => {
     if (!blob || blob.size === 0) {
-      alert('No reflection video data was captured. Please record for at least a few seconds and try again.');
+      alert('We could not save this reflection because the browser did not return video data. This question will restart automatically.');
       return false;
     }
 
@@ -979,11 +988,23 @@ const finalizeSectionRecording = async () => {
       if (reflectionVideoRef.current) {
         reflectionVideoRef.current.srcObject = cameraStream;
       }
-      const canvasStream = await initCanvasPipeline(cameraStream);
-      const micTracks = cameraStream.getAudioTracks();
-      micTracks.forEach(t => canvasStream.addTrack(t));
+      let recordingStream;
+      if (currentSection.requiresScreenShare) {
+        const canvasStream = await initCanvasPipeline(cameraStream);
+        const micTracks = cameraStream.getAudioTracks();
+        micTracks.forEach(t => canvasStream.addTrack(t));
+        recordingStream = canvasStream;
+      } else {
+        // Camera-only prompts are more reliable when recorded directly. The
+        // canvas compositor is only needed when the candidate may switch to screen share.
+        recordingStream = new MediaStream([
+          ...cameraStream.getVideoTracks(),
+          ...cameraStream.getAudioTracks(),
+        ]);
+      }
 
-      const recorder = new MediaRecorder(canvasStream, { mimeType: 'video/webm;codecs=vp9,opus' });
+      const mimeType = getSupportedWebmMimeType();
+      const recorder = new MediaRecorder(recordingStream, mimeType ? { mimeType } : undefined);
       sectionRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => { 
@@ -996,9 +1017,9 @@ const finalizeSectionRecording = async () => {
         console.error('[FRONTEND] Section MediaRecorder error:', err);
       };
 
-      // 🔥 WARM-UP: ensure the camera <video> is actually playing and the canvas has painted
+      // Warm-up: ensure the camera <video> is actually playing before the recorder starts.
       async function waitForPlayingAndFirstFrames() {
-        const v = camVideoElRef.current;
+        const v = currentSection.requiresScreenShare ? camVideoElRef.current : reflectionVideoRef.current;
         if (v && v.readyState < 2) {
           await new Promise((resolve) => {
             const onPlay = () => { v.removeEventListener('playing', onPlay); resolve(); };
@@ -1006,7 +1027,7 @@ const finalizeSectionRecording = async () => {
             v.play().catch(() => resolve());
           });
         }
-        // wait for 2 RAFs so draw() has painted at least once
+        // wait for 2 RAFs so either the direct preview or canvas has painted at least once
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       }
 
