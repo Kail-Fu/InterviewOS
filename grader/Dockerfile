@@ -4,9 +4,10 @@ WORKDIR /app
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+      build-essential \
       curl \
       ffmpeg \
-      openjdk-17-jdk-headless \
+      default-jdk-headless \
       maven \
       nodejs \
       npm \
