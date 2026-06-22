@@ -17,6 +17,7 @@ def _probe_duration_seconds(video_path: Path) -> int:
             check=True,
             capture_output=True,
             text=True,
+            timeout=30,
         )
         raw = result.stdout.strip()
         return max(0, int(round(float(raw)))) if raw else 0
