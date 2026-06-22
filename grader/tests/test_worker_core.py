@@ -18,6 +18,15 @@ class WorkerCoreTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 safe_extract(archive, root / "out")
 
+    def test_safe_extract_blocks_sibling_prefix_escape(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            archive = root / "bad-prefix.zip"
+            with zipfile.ZipFile(archive, "w") as zipf:
+                zipf.writestr("../out-evil/escape.txt", "bad")
+            with self.assertRaises(ValueError):
+                safe_extract(archive, root / "out")
+
     def test_structural_similarity_scores_nested_json(self):
         expected = {"name": "Alice", "items": [{"price": 10}, {"price": 20}]}
         actual = {"name": "Alice", "items": [{"price": 10}, {"price": 25}]}
