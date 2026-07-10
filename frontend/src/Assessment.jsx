@@ -1836,20 +1836,19 @@ const finalizeSectionRecording = async () => {
     }
 
     const formData = new FormData();
+    formData.append('name', userInfo.name);
+    formData.append('email', userInfo.email);
+    formData.append('assessmentId', userInfo.assessmentId);
     
     if (isAssessment4) {
       // Assessment 4: dual file upload
       formData.append('submissionZip', zipFile);
       formData.append('notebookFile', notebookFile);
-      formData.append('assessmentId', userInfo.assessmentId);
     } else {
       // Other assessments: single zip upload
       if (zipFile) {
         formData.append('zipFile', zipFile);
       }
-      formData.append('name', userInfo.name);
-      formData.append('email', userInfo.email);
-      formData.append('assessmentId', userInfo.assessmentId);
     }
     
     if (company === undefined || company === null || company === '') {

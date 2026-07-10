@@ -343,7 +343,7 @@ def _init_pending_report(
 def _upload_response_payload(
     *,
     candidate_id: int | None,
-    assessment_id: str,
+    assessment_id: int | str,
     path: str | None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
@@ -580,42 +580,42 @@ async def upload_zip(
     email: str = Form(""),
     settings: Settings = Depends(get_settings),
 ):
+    assessment_numeric = _resolve_assessment_id(assessmentId, settings)
+    assessment = get_assessment(settings, assessment_numeric)
+    if assessment is None:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    normalized_email = email.strip().lower()
+    if not normalized_email:
+        raise HTTPException(status_code=400, detail="email is required")
+
     dest_name = None
     if zipFile is not None:
         original_name = zipFile.filename or "submission.zip"
         if not original_name.lower().endswith(".zip"):
             original_name = f"{original_name}.zip"
-        file_name = f"{assessmentId}-{uuid.uuid4().hex}-{original_name}"
+        file_name = f"{assessment_numeric}-{uuid.uuid4().hex}-{original_name}"
         dest = Path(settings.local_submissions_dir) / _safe_key(file_name)
         dest.parent.mkdir(parents=True, exist_ok=True)
         data = await zipFile.read()
         dest.write_bytes(data)
         dest_name = dest.name
-    candidate = None
-    try:
-        assessment_numeric = int(assessmentId)
-        assessment = get_assessment(settings, assessment_numeric)
-        if email and assessment is not None:
-            candidate = mark_candidate_submitted(
-                settings,
-                assessment_id=assessment_numeric,
-                email=email,
-                name=name or None,
-            )
-            _init_pending_report(
-                settings,
-                candidate.id,
-                assessment_numeric,
-                assessment.assessment_type,
-                submission_file=dest_name,
-            )
-    except ValueError:
-        pass
-    if candidate is not None:
-        background_tasks.add_task(run_scoring_and_store_report, settings, candidate)
+    candidate = mark_candidate_submitted(
+        settings,
+        assessment_id=assessment_numeric,
+        email=normalized_email,
+        name=name or None,
+    )
+    _init_pending_report(
+        settings,
+        candidate.id,
+        assessment_numeric,
+        assessment.assessment_type,
+        submission_file=dest_name,
+    )
+    background_tasks.add_task(run_scoring_and_store_report, settings, candidate)
     return _upload_response_payload(
-        candidate_id=candidate.id if candidate is not None else None,
-        assessment_id=assessmentId,
+        candidate_id=candidate.id,
+        assessment_id=assessment_numeric,
         path=dest_name,
     )
 
@@ -634,12 +634,19 @@ async def upload_assessment4(
         raise HTTPException(status_code=400, detail="submissionZip is required")
     if notebookFile is None:
         raise HTTPException(status_code=400, detail="notebookFile is required")
+    assessment_numeric = _resolve_assessment_id(assessmentId, settings)
+    assessment = get_assessment(settings, assessment_numeric)
+    if assessment is None:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    normalized_email = email.strip().lower()
+    if not normalized_email:
+        raise HTTPException(status_code=400, detail="email is required")
 
     upload_token = uuid.uuid4().hex
     zip_name = submissionZip.filename or "submission.zip"
     if not zip_name.lower().endswith(".zip"):
         zip_name = f"{zip_name}.zip"
-    zip_dest_name = f"{assessmentId}-{upload_token}-{zip_name}"
+    zip_dest_name = f"{assessment_numeric}-{upload_token}-{zip_name}"
     zip_dest = Path(settings.local_submissions_dir) / _safe_key(zip_dest_name)
     zip_dest.parent.mkdir(parents=True, exist_ok=True)
     zip_dest.write_bytes(await submissionZip.read())
@@ -647,37 +654,28 @@ async def upload_assessment4(
     notebook_name = notebookFile.filename or "notebook.ipynb"
     if not notebook_name.lower().endswith(".ipynb"):
         notebook_name = f"{notebook_name}.ipynb"
-    notebook_dest_name = f"{assessmentId}-{upload_token}-{notebook_name}"
+    notebook_dest_name = f"{assessment_numeric}-{upload_token}-{notebook_name}"
     notebook_dest = Path(settings.local_submissions_dir) / _safe_key(notebook_dest_name)
     notebook_dest.write_bytes(await notebookFile.read())
 
-    candidate = None
-    try:
-        assessment_numeric = int(assessmentId)
-        assessment = get_assessment(settings, assessment_numeric)
-        if email and assessment is not None:
-            candidate = mark_candidate_submitted(
-                settings,
-                assessment_id=assessment_numeric,
-                email=email,
-                name=name or None,
-            )
-            _init_pending_report(
-                settings,
-                candidate.id,
-                assessment_numeric,
-                assessment.assessment_type,
-                submission_file=zip_dest_name,
-            )
-    except ValueError:
-        pass
-
-    if candidate is not None:
-        background_tasks.add_task(run_scoring_and_store_report, settings, candidate)
+    candidate = mark_candidate_submitted(
+        settings,
+        assessment_id=assessment_numeric,
+        email=normalized_email,
+        name=name or None,
+    )
+    _init_pending_report(
+        settings,
+        candidate.id,
+        assessment_numeric,
+        assessment.assessment_type,
+        submission_file=zip_dest_name,
+    )
+    background_tasks.add_task(run_scoring_and_store_report, settings, candidate)
 
     return _upload_response_payload(
-        candidate_id=candidate.id if candidate is not None else None,
-        assessment_id=assessmentId,
+        candidate_id=candidate.id,
+        assessment_id=assessment_numeric,
         path=zip_dest_name,
     )
 
