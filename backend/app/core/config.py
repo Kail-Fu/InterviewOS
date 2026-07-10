@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -55,6 +55,15 @@ class Settings(BaseSettings):
                 return ["*"]
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
+
+    @model_validator(mode="after")
+    def reject_wildcard_cors_outside_local_environments(self) -> "Settings":
+        local_environments = {"dev", "development", "local", "test"}
+        if self.app_env.strip().lower() not in local_environments and "*" in self.cors_origins:
+            raise ValueError(
+                "CORS_ORIGINS cannot contain '*' outside dev, development, local, or test environments"
+            )
+        return self
 
     @field_validator("app_base_url")
     @classmethod

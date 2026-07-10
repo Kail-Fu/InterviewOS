@@ -94,6 +94,7 @@ Provide AWS credentials with permissions for SES and S3.
 ## Environment Notes
 
 - `CORS_ORIGINS` must be a JSON list.
+- Wildcard CORS is accepted only for `APP_ENV=dev`, `development`, `local`, or `test`. Production deployments must set an explicit origin list, for example `["https://interview.example.com"]`; startup fails fast otherwise.
 Examples:
 `["*"]`
 `["http://localhost:5173"]`
