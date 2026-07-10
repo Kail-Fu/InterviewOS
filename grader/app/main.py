@@ -59,11 +59,14 @@ def run_cmd(args: list[str], *, cwd: Path | None = None, timeout: int = 120, env
 
 
 def safe_extract(zip_path: Path, dest: Path) -> Path:
+    destination = dest.resolve()
     with zipfile.ZipFile(zip_path) as archive:
         for member in archive.infolist():
             target = (dest / member.filename).resolve()
-            if not str(target).startswith(str(dest.resolve())):
-                raise ValueError(f"Unsafe archive path: {member.filename}")
+            try:
+                target.relative_to(destination)
+            except ValueError:
+                raise ValueError(f"Unsafe archive path: {member.filename}") from None
         archive.extractall(dest)
     return normalize_root(dest)
 
