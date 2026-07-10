@@ -197,8 +197,8 @@ def _find_reflections(settings: Settings, assessment_id: int, email: str) -> lis
     )
     reflections: list[Path] = []
     for upload in uploads:
-        candidate_reflection = Path(settings.local_recordings_dir) / _safe_key(str(upload.get("s3Key") or ""))
-        if _is_playable_recording(candidate_reflection):
+        candidate_reflection = _recording_path(settings, str(upload.get("s3Key") or ""))
+        if candidate_reflection is not None:
             reflections.append(candidate_reflection)
     if reflections:
         return reflections
@@ -229,13 +229,13 @@ def _reflection_payload_for_candidate(settings: Settings, candidate_id: int, ass
     payload: list[dict[str, object]] = []
     for upload in uploads:
         key = str(upload.get("s3Key") or "")
-        path = Path(settings.local_recordings_dir) / _safe_key(key)
-        if not key or not _is_playable_recording(path):
+        path = _recording_path(settings, key)
+        if not key or path is None:
             continue
         payload.append(
             {
                 "sectionId": upload.get("sectionId"),
-                "s3Key": str(path.relative_to(Path(settings.local_recordings_dir))),
+                "s3Key": str(path.relative_to(Path(settings.local_recordings_dir).resolve())),
                 "uploadedAt": upload.get("uploadedAt"),
                 "videoUrl": f"/api/artifacts/recordings/{candidate_id}/reflection/{len(payload)}",
             }

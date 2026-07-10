@@ -144,6 +144,26 @@ class ReportContractTests(unittest.TestCase):
             self.assertEqual(payload[0]["sectionId"], "demo_work")
             self.assertEqual(payload[0]["s3Key"], "reflection/1/demo_work-good.webm")
 
+    def test_reflection_payload_rejects_paths_outside_recordings_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            settings = self.make_settings(root)
+            init_assessment_store(settings)
+            outside = root / "outside.webm"
+            outside.write_bytes(b"webm-data")
+
+            record_reflection_upload(
+                settings,
+                assessment_id=1,
+                email="candidate@example.com",
+                section_id="demo_work",
+                s3_key="../outside.webm",
+            )
+
+            payload = _reflection_payload(settings, 1, "candidate@example.com")
+
+            self.assertEqual(payload, [])
+
 
 if __name__ == "__main__":
     unittest.main()

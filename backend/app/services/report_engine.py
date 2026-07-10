@@ -28,6 +28,16 @@ def _safe_relative(path: Path, base: Path) -> str | None:
         return None
 
 
+def _path_within(root_value: str, key: str) -> Path | None:
+    root = Path(root_value).resolve()
+    candidate = (root / key.replace('\\', '/')).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    return candidate
+
+
 def _is_playable_recording(path: Path) -> bool:
     try:
         return path.is_file() and path.stat().st_size > 0
@@ -38,10 +48,10 @@ def _is_playable_recording(path: Path) -> bool:
 def _submission_path(settings: Settings, assessment_id: int, submission_file: str | None) -> Path | None:
     if not submission_file:
         return None
-    root = Path(settings.local_submissions_dir)
-    candidate_path = root / _safe_key(submission_file)
+    candidate_path = _path_within(settings.local_submissions_dir, submission_file)
     if (
-        candidate_path.is_file()
+        candidate_path is not None
+        and candidate_path.is_file()
         and candidate_path.name.startswith(f'{assessment_id}-')
         and candidate_path.suffix.lower() == '.zip'
     ):
@@ -100,6 +110,13 @@ def _find_latest_assessment_recording(settings: Settings, assessment_id: int) ->
     return max(matches, key=lambda p: p.stat().st_mtime)
 
 
+def _recording_path(settings: Settings, key: str) -> Path | None:
+    candidate = _path_within(settings.local_recordings_dir, key)
+    if candidate is None or not _is_playable_recording(candidate):
+        return None
+    return candidate
+
+
 def _find_latest_reflection_recording(
     settings: Settings,
     assessment_id: int,
@@ -121,8 +138,8 @@ def _find_reflection_recordings(
     )
     recordings: list[Path] = []
     for upload in uploads:
-        candidate_reflection = Path(settings.local_recordings_dir) / _safe_key(str(upload.get("s3Key") or ""))
-        if _is_playable_recording(candidate_reflection):
+        candidate_reflection = _recording_path(settings, str(upload.get("s3Key") or ""))
+        if candidate_reflection is not None:
             recordings.append(candidate_reflection)
     if recordings:
         return recordings
@@ -148,13 +165,13 @@ def _reflection_payload(settings: Settings, assessment_id: int, candidate_email:
     payload: list[dict[str, str | None]] = []
     for upload in uploads:
         key = str(upload.get("s3Key") or "")
-        path = Path(settings.local_recordings_dir) / _safe_key(key)
-        if not key or not _is_playable_recording(path):
+        path = _recording_path(settings, key)
+        if not key or path is None:
             continue
         payload.append(
             {
                 "sectionId": upload.get("sectionId"),
-                "s3Key": _safe_relative(path, Path(settings.local_recordings_dir)),
+                "s3Key": _safe_relative(path, Path(settings.local_recordings_dir).resolve()),
                 "uploadedAt": upload.get("uploadedAt"),
             }
         )
