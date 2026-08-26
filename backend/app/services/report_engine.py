@@ -17,6 +17,40 @@ from app.services.grader_client import absolute_path_or_none, grade_with_worker
 from app.services.screen_time_analyzer import analyze_screen_time
 
 
+RECORDING_EVIDENCE_CHECKS = {"Workflow recording", "Reflection recordings"}
+
+
+def normalize_evidence_statuses(results: list[dict[str, object]]) -> list[dict[str, object]]:
+    normalized: list[dict[str, object]] = []
+    for result in results:
+        item = dict(result)
+        if item.get("name") in RECORDING_EVIDENCE_CHECKS and item.get("status") == "pass":
+            item["status"] = "uploaded"
+        normalized.append(item)
+    return normalized
+
+
+def recording_evidence_checks(recording: Path | None, reflections: list[Path]) -> list[dict[str, object]]:
+    return [
+        {
+            "name": "Workflow recording",
+            "status": "uploaded" if recording else "partial",
+            "expected": "Upload full-screen workflow recording",
+            "output": recording.name if recording else "No workflow recording found",
+        },
+        {
+            "name": "Reflection recordings",
+            "status": "uploaded" if reflections else "partial",
+            "expected": "Upload one recording for each reflection prompt",
+            "output": (
+                f"{len(reflections)} reflection recording(s) found"
+                if reflections
+                else "No reflection recording found"
+            ),
+        },
+    ]
+
+
 def _safe_key(name: str) -> str:
     return name.replace('..', '').replace('\\', '/').lstrip('/')
 
@@ -445,22 +479,7 @@ def run_scoring_and_store_report(settings: Settings, candidate: CandidateRecord)
             report_error = None
             report_payload = {}
 
-        checks.append(
-            {
-                'name': 'Workflow recording',
-                'status': 'pass' if recording else 'partial',
-                'expected': 'Upload full-screen workflow recording',
-                'output': recording.name if recording else 'No workflow recording found',
-            }
-        )
-        checks.append(
-            {
-                'name': 'Reflection recordings',
-                'status': 'pass' if reflection_recordings else 'partial',
-                'expected': 'Upload one recording for each reflection prompt',
-                'output': f'{len(reflection_recordings)} reflection recording(s) found' if reflection_recordings else 'No reflection recording found',
-            }
-        )
+        checks.extend(recording_evidence_checks(recording, reflection_recordings))
 
         if recording and total_duration:
             summary.append(f'Screen-time analyzer processed recording: {total_duration}s total duration.')

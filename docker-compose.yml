@@ -11,7 +11,7 @@ services:
       EMAIL_PROVIDER: smtp
       STORAGE_PROVIDER: local
       RECORDING_PROVIDER: local
-      REPORT_GRADER_PROVIDER: ${REPORT_GRADER_PROVIDER:-local}
+      REPORT_GRADER_PROVIDER: ${REPORT_GRADER_PROVIDER:-worker}
       GRADER_WORKER_URL: http://grader:9000
       REPORT_GRADER_TIMEOUT_SECONDS: 900
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -35,6 +35,7 @@ services:
       - ./backend/recordings:/app/recordings
       - ./backend/data:/app/data
     depends_on:
+      - grader
       - mailpit
 
   frontend:
@@ -48,8 +49,6 @@ services:
       - backend
 
   grader:
-    profiles:
-      - full
     build:
       context: ./grader
     environment:

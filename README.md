@@ -108,17 +108,10 @@ This starts:
 
 * Frontend: [http://localhost:5173](http://localhost:5173)
 * Backend API: [http://localhost:8000](http://localhost:8000)
+* Full report grader: [http://localhost:9000](http://localhost:9000)
 * Local email inbox (Mailpit): [http://localhost:8025](http://localhost:8025)
 
-A bundled sample assessment is included so you can test the full flow immediately.
-
-For full executable report generation, start the optional grader worker:
-
-```bash
-make dev-full
-```
-
-This keeps the default local stack light while enabling heavier assessment evaluators for report generation.
+A bundled sample assessment and the executable grader worker are included, so the default command supports the full invite, assessment, upload, and report-generation flow. `make dev-full` remains as a backward-compatible alias for `make dev`.
 
 ---
 
@@ -154,13 +147,14 @@ This keeps the default local stack light while enabling heavier assessment evalu
   * report API compatibility endpoint: `GET /report/{id}`
   * assessment-result action now includes `View Report`
   * `POST /upload-zip` now triggers assessment-linked background scoring dispatch and persists report records in local SQLite
-  * optional grader worker mode via `make dev-full` for executable evaluators across supported assessment types
+  * the default `make dev` stack includes the grader worker and executable evaluators across supported assessment types
   * local artifact endpoints support submission downloads and report video playback without AWS
   * local screen-time analyzer hook is enabled for uploaded workflow recordings (duration baseline, richer worker path when enabled)
   * candidate completion now lands on a loading screen that polls report readiness and auto-redirects to `/report/:id`
   * assessment4 dual-artifact upload path is supported via `POST /upload-assessment4` (submission zip + notebook)
   * report scoring now uses candidate-scoped submission and reflection artifacts instead of assessment-wide latest files
   * report artifacts now show all playable reflection recordings per candidate and ignore empty/unplayable local `.webm` uploads
+  * workflow and reflection evidence use a blue `uploaded` status instead of `pass`, because upload presence is not an evaluation result
   * default Users API diffs compare submissions against the actual distributed assessment archive, avoiding false diffs for unchanged starter code
   * report UI now renders score, test evidence, assessment overview, app usage, code diffs, code-quality findings, NER metrics, videos, and submission download actions when present
 * reliability and security hardening:
@@ -183,7 +177,7 @@ InterviewOS is split into:
 
 * `frontend/`: candidate and admin UI
 * `backend/`: API, invite lifecycle, local SQLite state, assessment packaging, and report scoring pipeline
-* `grader/`: optional full-report worker with heavier evaluator runtimes and starter fixtures
+* `grader/`: full-report worker with evaluator runtimes and starter fixtures, included in the default Docker stack
 * `docker-compose.yml`: local end-to-end dev environment (including Mailpit)
 
 For development details, see [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -247,7 +241,7 @@ Initial production-ready open-source local workflow: Docker Compose setup, Mailp
 
 ## Status
 
-InterviewOS `v1.3.0` is production-ready for the open-source local workflow. The default stack remains lightweight and local-first; the optional full grader worker enables deeper executable report generation when you need assessment-specific grading. Candidate recordings, reflection artifacts, and default report diffs have been hardened for more reliable end-to-end local testing.
+InterviewOS `v1.3.0` is production-ready for the open-source local workflow. The default `make dev` stack is local-first and includes executable report generation out of the box. Candidate recordings, reflection artifacts, and default report diffs have been hardened for more reliable end-to-end local testing.
 
 If you try it and hit sharp edges, please open an issue. Feature requests and PRs are welcome.
 

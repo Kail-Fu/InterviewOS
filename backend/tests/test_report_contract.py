@@ -15,7 +15,12 @@ from app.services.assessment_store import (
     upsert_report,
     get_report_by_candidate,
 )
-from app.services.report_engine import _detect_assessment_type, _reflection_payload
+from app.services.report_engine import (
+    _detect_assessment_type,
+    _reflection_payload,
+    normalize_evidence_statuses,
+    recording_evidence_checks,
+)
 
 
 class ReportContractTests(unittest.TestCase):
@@ -71,6 +76,26 @@ class ReportContractTests(unittest.TestCase):
         self.assertEqual(_detect_assessment_type("assessment4-ner"), "assessment4-ner")
         self.assertEqual(_detect_assessment_type("json-comparison"), "json-comparison")
         self.assertEqual(_detect_assessment_type("unexpected"), "default")
+
+    def test_recording_evidence_is_uploaded_not_passed(self):
+        workflow = Path("assessment.webm")
+        reflections = [Path("demo.webm"), Path("struggles.webm")]
+
+        checks = recording_evidence_checks(workflow, reflections)
+
+        self.assertEqual([check["status"] for check in checks], ["uploaded", "uploaded"])
+        self.assertEqual(checks[1]["output"], "2 reflection recording(s) found")
+
+    def test_historical_recording_pass_statuses_are_normalized(self):
+        results = [
+            {"name": "Server startup", "status": "pass"},
+            {"name": "Workflow recording", "status": "pass"},
+            {"name": "Reflection recordings", "status": "pass"},
+        ]
+
+        normalized = normalize_evidence_statuses(results)
+
+        self.assertEqual([result["status"] for result in normalized], ["pass", "uploaded", "uploaded"])
 
     def test_reflection_uploads_keep_latest_per_section(self):
         with tempfile.TemporaryDirectory() as tmp:

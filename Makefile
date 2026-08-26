@@ -3,8 +3,8 @@
 dev:
 	docker compose up --build
 
-dev-full:
-	REPORT_GRADER_PROVIDER=worker docker compose --profile full up --build
+# Backward-compatible alias; the default stack now includes the grader.
+dev-full: dev
 
 down:
 	docker compose down

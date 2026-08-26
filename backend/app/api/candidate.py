@@ -27,7 +27,11 @@ from app.services.assessment_store import (
     upsert_report,
 )
 from app.services.invite_store import get_invite_by_token
-from app.services.report_engine import run_scoring_and_store_report
+from app.services.report_engine import (
+    normalize_evidence_statuses,
+    recording_evidence_checks,
+    run_scoring_and_store_report,
+)
 
 router = APIRouter(tags=["candidate"])
 
@@ -260,7 +264,7 @@ def _report_payload_from_record(
         "email": candidate_email,
         "score": report.score,
         "codeQuality": report.code_quality,
-        "results": report.results,
+        "results": normalize_evidence_statuses(report.results),
         "diffs": report.diffs,
         "codeSummaryBullets": report.code_summary_bullets,
         "reportReady": report.report_ready,
@@ -726,8 +730,6 @@ def report(candidate_id: int, settings: Settings = Depends(get_settings)):
     reflection_recording = reflection_recordings[-1] if reflection_recordings else None
 
     has_submission = submission is not None
-    has_assessment_recording = assessment_recording is not None
-    has_reflection_recording = bool(reflection_recordings)
     submission_relative = (
         str(submission.relative_to(Path(settings.local_submissions_dir))) if submission else None
     )
@@ -764,27 +766,8 @@ def report(candidate_id: int, settings: Settings = Depends(get_settings)):
                 else "No submission archive found"
             ),
         },
-        {
-            "name": "Workflow recording",
-            "status": "pass" if has_assessment_recording else "partial",
-            "expected": "Upload full-screen assessment workflow recording",
-            "output": (
-                f"Found {assessment_recording.name}"
-                if assessment_recording
-                else "No main workflow recording found"
-            ),
-        },
-        {
-            "name": "Reflection recordings",
-            "status": "pass" if has_reflection_recording else "partial",
-            "expected": "Upload reflection response recording(s)",
-            "output": (
-                f"{len(reflection_recordings)} reflection recording(s) found"
-                if reflection_recordings
-                else "No reflection recording found"
-            ),
-        },
     ]
+    results.extend(recording_evidence_checks(assessment_recording, reflection_recordings))
 
     summary_bullets = [
         "Submission received and linked to candidate record.",

@@ -18,6 +18,7 @@ function formatDuration(seconds) {
 
 function statusTone(status) {
   if (status === 'pass') return 'border-emerald-200 bg-emerald-50 text-emerald-800'
+  if (status === 'uploaded') return 'border-blue-200 bg-blue-50 text-blue-800'
   if (status === 'partial') return 'border-amber-200 bg-amber-50 text-amber-800'
   return 'border-rose-200 bg-rose-50 text-rose-800'
 }
